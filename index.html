@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Контракт: Стать Парой</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;800&family=Marck+Script&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- АНИМЕ СТИЛИЗАЦИЯ --- */
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            
+            /* Фон: Нежный градиент */
+            background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23ff69b4'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E") 12 12, auto;
+        }
+
+        /* Анимированные облака на фоне */
+        .cloud {
+            position: fixed;
+            background: #fff;
+            border-radius: 50px;
+            opacity: 0.6;
+            z-index: -1;
+            animation: floatCloud linear infinite;
+        }
+        
+        .cloud::after, .cloud::before {
+            content: '';
+            position: absolute;
+            background: inherit;
+            border-radius: 50%;
+        }
+
+        @keyframes floatCloud {
+            from { transform: translateX(-100vw); }
+            to { transform: translateX(100vw); }
+        }
+
+        /* --- 3D ЛИСТ БУМАГИ --- */
+        .paper {
+            position: relative;
+            width: 90%;
+            max-width: 480px;
+            background-color: #fff;
+            padding: 35px 25px;
+            border: 4px solid #5d4037;
+            border-bottom-width: 12px; /* Объем */
+            border-radius: 25px;
+            margin: 40px auto 100px auto;
+            min-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            transform: rotate(-1deg);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            
+            /* Анимация появления */
+            animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8) rotate(-5deg); opacity: 0; }
+            100% { transform: scale(1) rotate(-1deg); opacity: 1; }
+        }
+
+        /* Декоративное сердечко сверху */
+        .paper::after {
+            content: "❤";
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 36px;
+            color: #ff69b4;
+            background: #fff;
+            padding: 5px 15px;
+            border-radius: 50px;
+            border: 4px solid #5d4037;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-10px); }
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            margin: 15px 0 25px 0;
+            color: #ff69b4;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 3px 3px 0px #ffe4e1;
+            font-weight: 800;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-5px); }
+            60% { transform: translateY(-3px); }
+        }
+
+        /* --- ТЕКСТ --- */
+        .contract-text-wrapper {
+            flex-grow: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .contract-text {
+            font-family: 'Marck Script', cursive;
+            font-size: 1.6rem;
+            line-height: 1.5;
+            color: #554a4a;
+        }
+
+        p { margin-bottom: 20px; }
+
+        /* --- СПОЙЛЕР --- */
+        .spoiler {
+            color: transparent;
+            background-color: #ffaeb9;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E");
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+            padding: 2px 8px;
+            transition: all 0.5s ease;
+            position: relative;
+            box-decoration-break: clone;
+            -webkit-box-decoration-break: clone;
+        }
+
+        .contract-text-wrapper.revealed .spoiler {
+            color: #554a4a;
+            background: rgba(255, 182, 193, 0.3);
+            user-select: text;
+            background-image: none;
+        }
+
+        /* --- КНОПКИ --- */
+        .buttons-container {
+            margin-top: 30px;
+            padding: 10px 0;
+            display: flex;
+            justify-content: center; /* Центрируем */
+            gap: 60px; /* Большое расстояние между кнопками изначально */
+            align-items: center;
+            height: 100px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .btn {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            font-weight: 800;
+            font-size: 1.3rem;
+            padding: 12px 30px;
+            border: 3px solid #000;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            /* 3D Тень */
+            box-shadow: 0 6px 0 #000; 
+            position: relative; /* Изначально relative */
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #000;
+        }
+
+        /* Кнопка ДА */
+        #btn-yes {
+            background-color: #ff69b4;
+            color: white;
+            z-index: 20;
+            animation: heartbeat 1.5s infinite;
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            15% { transform: scale(1.1); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Кнопка НЕТ */
+        #btn-no {
+            background-color: #87ceeb;
+            color: white;
+            z-index: 30;
+            /* Анимация перехода в абсолют */
+            transition: left 0.2s ease-out, top 0.2s ease-out, transform 0.2s;
+        }
+
+        .emoji-icon { font-size: 1.5rem; margin-left: 5px; }
+
+        /* --- ПЕЧАТЬ --- */
+        .stamp {
+            position: absolute;
+            bottom: 40px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 5px solid #ff69b4;
+            border-radius: 50%;
+            color: #ff69b4;
+            font-weight: 800;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            transform: scale(0) rotate(20deg);
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: none;
+            z-index: 50;
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            box-shadow: 0 10px 20px rgba(255, 105, 180, 0.2);
+        }
+
+        .stamp.visible {
+            transform: scale(1) rotate(-10deg);
+            opacity: 1;
+        }
+
+        /* --- САКУРА --- */
+        .sakura {
+            position: fixed;
+            background-color: #ffc0cb;
+            border-radius: 100% 0 100% 0;
+            pointer-events: none;
+            z-index: 999;
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(720deg); }
+        }
+
+        /* Клик-эффект (Искорки) */
+        .sparkle {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #fff 0%, transparent 70%);
+            pointer-events: none;
+            animation: sparkleAnim 0.5s linear forwards;
+            z-index: 1000;
+        }
+
+        @keyframes sparkleAnim {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        @media (max-width: 480px) {
+            .paper { padding: 30px 20px; width: 94%; }
+            h1 { font-size: 1.6rem; }
+            .contract-text { font-size: 1.35rem; }
+            .buttons-container { gap: 30px; } /* Чуть меньше на телефоне, но все равно раздельно */
+            .btn { font-size: 1.1rem; padding: 10px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Облака -->
+    <div class="cloud" style="top: 10%; left: -20%; width: 120px; height: 60px; animation-duration: 25s;"></div>
+    <div class="cloud" style="top: 30%; left: -10%; width: 180px; height: 90px; animation-duration: 35s;"></div>
+    <div class="cloud" style="top: 70%; right: -20%; width: 140px; height: 70px; animation-duration: 28s;"></div>
+
+    <div class="paper" id="paper-area">
+        <h1>✨ Контракт Любви ✨</h1>
+
+        <div class="contract-text-wrapper" id="text-wrapper">
+            <div class="contract-text">
+                <p><strong>г. Токио (в мечтах)</strong></p>
+                <p>
+                    <span class="spoiler">Этот кавайный документ составлен между 
+                    <strong>[Твое Имя]</strong> (Семпай) 
+                    и <strong>[Её Имя]</strong> (Тян).</span>
+                </p>
+                <p>
+                    <strong>1. МИССИЯ</strong><br>
+                    <span class="spoiler">1.1. Семпай предлагает стать официальной парой и дарить бесконечные обнимашки! UwU</span>
+                </p>
+                <p>
+                    <strong>2. ОБЕЩАНИЯ</strong><br>
+                    <span class="spoiler">2.1. Я обещаю: покупать вкусняшки и смотреть с тобой аниме.<br>
+                    2.2. Ты обещаешь: быть самой милой булочкой.</span>
+                </p>
+                <p style="margin-top: 35px; text-align: center;">
+                    <span class="spoiler" style="font-weight: bold; font-size: 1.7rem; color: #ff69b4;">Ты согласна? 🥺</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Контейнер для кнопок -->
+        <div class="buttons-container" id="btns-container">
+            <button class="btn" id="btn-yes">Да! <span class="emoji-icon">💖</span></button>
+            <button class="btn" id="btn-no">Нет <span class="emoji-icon">😖</span></button>
+        </div>
+
+        <div id="stamp" class="stamp">
+            <div>
+                LOVE<br>
+                <span style="font-size: 2rem;">APPROVED</span><br>
+                ❤
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const btnNo = document.getElementById('btn-no');
+        const btnYes = document.getElementById('btn-yes');
+        const textWrapper = document.getElementById('text-wrapper');
+        const stamp = document.getElementById('stamp');
+        const paper = document.getElementById('paper-area');
+        
+        // Переменная для отслеживания, начала ли кнопка "Нет" двигаться
+        let isRunning = false;
+
+        const random = (min, max) => Math.random() * (max - min) + min;
+
+        // --- ЛОГИКА ПРЫЖКА ---
+        const moveButton = () => {
+            if (btnYes.disabled) return;
+
+            // 1. Первый раз переключаем на absolute
+            if (!isRunning) {
+                // Получаем текущие координаты, чтобы не было визуального скачка
+                // Но проще сразу сгенерировать прыжок
+                btnNo.style.position = 'absolute';
+                isRunning = true;
+            }
+
+            // Смена эмодзи
+            btnNo.querySelector('.emoji-icon').innerText = "﹏";
+            setTimeout(() => btnNo.querySelector('.emoji-icon').innerText = "😖", 300);
+
+            // Размеры
+            const yesRect = btnYes.getBoundingClientRect();
+            // Получаем координаты Yes относительно Paper, так как btnNo будет absolute внутри Paper
+            // Но btnNo находится внутри buttons-container. 
+            // Чтобы упростить жизнь, перенесем btnNo в Paper если нужно, или считать относительно container.
+            // Сейчас он внутри container (height: 100px). Если он прыгнет высоко вверх, он может обрезаться overflow (если есть).
+            // Но у нас overflow: visible, так что все ок.
+            
+            // Считаем относительно КОНТЕЙНЕРА кнопок
+            const containerRect = document.getElementById('btns-container').getBoundingClientRect();
+            
+            // Координаты кнопки Да внутри контейнера
+            const yesX = btnYes.offsetLeft;
+            const yesY = btnYes.offsetTop;
+            const yesW = btnYes.offsetWidth;
+            const yesH = btnYes.offsetHeight;
+            
+            // Центр кнопки Да
+            const centerX = yesX + (yesW / 2);
+            
+            // Параметры прыжка
+            const radius = random(60, 120); // Радиус прыжка
+            
+            // Угол: прыгаем только ВВЕРХ, ВЛЕВО, ВПРАВО.
+            // В системе координат CSS Y вниз. Значит вверх - это отрицательный Y.
+            // Угол 0 - право, PI - лево, PI/2 - низ (запрет), 3PI/2 (-PI/2) - верх.
+            // Берем диапазон от PI (180°) до 2PI (360°). Это верхняя полусфера.
+            const angle = random(Math.PI + 0.2, 2 * Math.PI - 0.2);
+            
+            const offsetX = Math.cos(angle) * radius;
+            const offsetY = Math.sin(angle) * radius;
+
+            const noW = btnNo.offsetWidth;
+            const noH = btnNo.offsetHeight;
+
+            // Новые координаты
+            let newX = centerX + offsetX - (noW / 2);
+            let newY = yesY + offsetY - (noH / 2);
+
+            // --- БЕЗОПАСНОСТЬ ---
+            // 1. Не опускаться ниже верха кнопки "Да" (с запасом 10px)
+            if (newY > yesY - 10) {
+                newY = yesY - 10 - random(10, 30);
+            }
+
+            // 2. Не вылетать слишком далеко по X
+            // Ширина контейнера (примерно равна ширине бумаги)
+            const containerW = containerRect.width;
+            
+            if (newX < -20) newX = 10;
+            if (newX + noW > containerW + 20) newX = containerW - noW - 10;
+
+            // Применяем
+            btnNo.style.left = `${newX}px`;
+            btnNo.style.top = `${newY}px`;
+            
+            // Наклон
+            btnNo.style.transform = `rotate(${random(-15, 15)}deg)`;
+        };
+
+        // --- СОБЫТИЯ ---
+        btnNo.addEventListener('mouseover', moveButton);
+        btnNo.addEventListener('touchstart', (e) => { e.preventDefault(); moveButton(); }, { passive: false });
+        // Резерв на клик
+        btnNo.addEventListener('click', (e) => { e.preventDefault(); moveButton(); });
+
+        // Сброс при ресайзе
+        window.addEventListener('resize', () => {
+             isRunning = false;
+             btnNo.style.position = 'relative';
+             btnNo.style.left = 'auto';
+             btnNo.style.top = 'auto';
+             btnNo.style.transform = 'none';
+        });
+
+        // --- ПОБЕДА ---
+        btnYes.addEventListener('click', () => {
+            textWrapper.classList.add('revealed');
+            btnYes.disabled = true;
+            btnYes.style.animation = 'none';
+            btnYes.innerHTML = "Ура! <span class='emoji-icon'>😻</span>";
+            
+            // Исчезновение кнопки Нет
+            btnNo.style.opacity = '0';
+            btnNo.style.transform = 'scale(0)';
+            setTimeout(() => btnNo.style.display = 'none', 300);
+
+            setTimeout(() => {
+                stamp.classList.add('visible');
+                startSakura();
+            }, 300);
+        });
+
+        // --- ЭФФЕКТЫ ---
+        function startSakura() {
+            const colors = ['#ffc0cb', '#ffb7c5', '#ff69b4'];
+            for (let i = 0; i < 50; i++) {
+                const petal = document.createElement('div');
+                petal.classList.add('sakura');
+                const size = random(8, 15);
+                petal.style.width = `${size}px`;
+                petal.style.height = `${size}px`;
+                petal.style.left = Math.random() * 100 + 'vw';
+                petal.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                petal.style.animationDuration = random(3, 6) + 's';
+                document.body.appendChild(petal);
+                setTimeout(() => petal.remove(), 6000);
+            }
+        }
+
+        // Эффект искр при клике
+        document.addEventListener('click', (e) => {
+            const sparkle = document.createElement('div');
+            sparkle.classList.add('sparkle');
+            sparkle.style.left = `${e.clientX - 10}px`;
+            sparkle.style.top = `${e.clientY - 10}px`;
+            document.body.appendChild(sparkle);
+            setTimeout(() => sparkle.remove(), 500);
+        });
+
+    </script>
+</body>
+</html>
+
+
