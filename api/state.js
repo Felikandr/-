@@ -52,7 +52,9 @@ export default async function handler(req, res) {
 
     const current = currentRows[0];
 
-    if (body.rev !== undefined && Number(body.rev) !== Number(current.rev)) {
+    const expectedRev = body.baseRev ?? body.rev;
+
+if (expectedRev !== undefined && Number(expectedRev) !== Number(current.rev)) {
       return res.status(409).json({ error: "Revision conflict", rev: current.rev, state: current.state });
     }
 
