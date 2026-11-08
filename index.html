@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Склад картриджей</title>
+<style>
+:root {
+  --bg: #f1f3f7; --surface: #fff; --fg: #171c24; --muted: #667085; --line: #e1e5ec;
+  --accent: #2547a8; --accent-fg: #fff; --accent-soft: #e7ecfa;
+  --crit: #b3261e; --crit-bg: #fbe4e2; --warn: #8a5a00; --warn-bg: #fcefcf;
+  --k: #2b2f33; --c: #11a6cf; --m: #d6338c; --y: #f0bd00;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1318; --surface: #171c23; --fg: #e8ecf1; --muted: #9aa4b2; --line: #2a313b;
+    --accent: #8fb0f2; --accent-fg: #0b1220; --accent-soft: #1c2742;
+    --crit: #f4908a; --crit-bg: #3d1c1a; --warn: #e8bb55; --warn-bg: #392f12;
+    --k: #cfd5da;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); padding: 20px 16px 48px; }
+.wrap { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+header.top { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; justify-content: space-between; }
+h1 { margin: 0; font-size: 24px; font-weight: 650; display: flex; align-items: center; gap: 12px; }
+.logo { display: grid; grid-template-columns: repeat(2, 12px); gap: 2px; }
+.logo i { width: 12px; height: 12px; border-radius: 3px; }
+.who { color: var(--muted); font-size: 13px; margin-top: 4px; }
+button, input, select { font: inherit; color: inherit; }
+.btn { height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+.btn.danger { color: var(--crit); border-color: var(--crit); }
+.link { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; margin-left: 6px; text-decoration: underline; font-size: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.stat small { color: var(--muted); display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.stat b { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+.tools { display: flex; flex-wrap: wrap; gap: 10px; }
+.tools input, .tools select { height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.tools input { flex: 1 1 220px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; background: color-mix(in srgb, var(--bg) 50%, var(--surface)); }
+tbody tr.main:hover { background: color-mix(in srgb, var(--accent-soft) 40%, transparent); }
+tbody tr:last-child td { border-bottom: 0; }
+tr.sub td { background: color-mix(in srgb, var(--bg) 55%, var(--surface)); padding-top: 9px; padding-bottom: 9px; }
+tr.sub td:first-child { padding-left: 52px; }
+tr.sub .model { font-weight: 500; }
+tr.sub.last td { border-bottom: 1px solid var(--line); }
+.mcell { display: flex; align-items: center; gap: 10px; }
+.chev { width: 30px; height: 30px; flex: none; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.chev:hover { border-color: var(--accent); color: var(--accent); }
+.chev svg { width: 14px; height: 14px; transition: transform .2s; }
+.chev[aria-expanded="true"] svg { transform: rotate(180deg); }
+.chev[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.spacer30 { width: 30px; flex: none; }
+.model { font-weight: 600; }
+.brand { color: var(--muted); font-size: 12px; }
+.nomodel { color: var(--muted); }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: -1px; border: 1px solid var(--line); }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: var(--accent-soft); color: var(--accent); }
+.tag.bw { background: color-mix(in srgb, var(--muted) 18%, transparent); color: var(--fg); }
+.qty { display: inline-flex; align-items: center; gap: 8px; }
+.qty b { min-width: 32px; text-align: center; font-size: 18px; font-variant-numeric: tabular-nums; }
+.qty button { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 18px; line-height: 1; }
+.qty button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.qty button:disabled { opacity: .35; cursor: default; }
+.qty.zero b { color: var(--crit); }
+.bin { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 500; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+.meta { color: var(--muted); font-size: 13px; line-height: 1.3; }
+.meta b { color: var(--fg); font-weight: 500; display: block; }
+.empty { text-align: center; color: var(--muted); padding: 32px 16px; white-space: normal; }
+
+.overlay { position: fixed; inset: 0; background: rgba(8, 12, 20, .55); display: flex; align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; z-index: 10; }
+.overlay[hidden] { display: none; }
+.modal { background: var(--surface); border-radius: 14px; width: 100%; max-width: 500px; margin-top: 4vh; padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+.modal h2 { margin: 0; font-size: 18px; }
+.form { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field.full { grid-column: 1 / -1; }
+.field span, .phead span { font-size: 12px; color: var(--muted); }
+.field input, .field select, .prow input { height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); width: 100%; min-width: 0; }
+.parts { display: grid; gap: 8px; margin-top: 14px; }
+.phead, .prow { display: grid; grid-template-columns: 110px minmax(0, 1fr) 84px; gap: 8px; align-items: center; }
+.prow[hidden] { display: none; }
+.plabel { display: flex; align-items: center; font-size: 14px; }
+.err { background: var(--crit-bg); color: var(--crit); padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-top: 14px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.row .spacer { margin-left: auto; }
+@media (max-width: 480px) { .form { grid-template-columns: 1fr; } .phead, .prow { grid-template-columns: 88px minmax(0, 1fr) 72px; } }
+.sync { color: var(--muted); font-size: 12px; margin-left: 10px; }
+.sync.bad { color: var(--crit); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1><span class="logo" aria-hidden="true"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--k)"></i></span>Склад картриджей</h1>
+      <div class="who">Вы работаете как: <b id="opName"></b><button class="link" id="opChange" type="button">сменить</button><span class="sync" id="sync"></span></div>
+    </div>
+    <button class="btn primary" id="addBtn" type="button">+ Добавить картридж</button>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <div class="tools">
+    <input type="search" id="q" placeholder="Поиск по модели, бренду или отсеку">
+    <select id="fType">
+      <option value="">Все типы</option>
+      <option value="bw">Чёрно-белые</option>
+      <option value="color">Цветные</option>
+    </select>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Модель</th><th>Тип</th><th>Цвет</th><th>Количество</th><th>Отсек</th><th>Последнее изменение</th><th></th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" hidden></div>
+
+<script>
+/* ============================================================
+   Склад картриджей — базовая версия.
+   Структура кода, чтобы дальше расширять:
+   1. Справочники (COLORS, TYPES)
+   2. Данные и хранение (load / save) — заменить на сервер можно только здесь
+   3. Действия (addItem, updateItem, changeQty, removeItem)
+   4. Отображение (render)
+   5. Окна (openItemModal, openOperatorModal)
+
+   Запись: { id, brand, type: 'bw'|'color', bin, by, at,
+             parts: { k: {model, qty}, c: {...}, m: {...}, y: {...} } }
+   Чёрно-белый картридж имеет только parts.k.
+   Цветной комплект имеет все четыре цвета; в таблице показан чёрный,
+   остальные раскрываются стрелкой.
+   state.log хранит историю всех правок — на будущее для раздела «История».
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* 1. Справочники */
+  var TYPES = { bw: 'Чёрно-белый', color: 'Цветной' };
+  var COLORS = { k: 'Чёрный', c: 'Голубой', m: 'Пурпурный', y: 'Жёлтый' };
+  var ORDER = ['k', 'c', 'm', 'y'];
+  var LOW = 2; // меньше или равно — считать «заканчивается»
+
+  /* 2. Данные и хранение */
+  var KEY = 'cartridges-simple-v2', OP_KEY = 'cartridges-operator';
+  var usedSeed = false, touched = false, rev = null, pushing = false, dirty = false;
+  var state = load();
+  var open = {}; // какие цветные комплекты раскрыты
+
+  function colorsOf(type) { return type === 'bw' ? ['k'] : ORDER; }
+  function seed() {
+    var now = Date.now(), d = 864e5;
+    function P(k, c, m, y) {
+      var o = { k: { model: k[0], qty: k[1] } };
+      if (c) { o.c = { model: c[0], qty: c[1] }; o.m = { model: m[0], qty: m[1] }; o.y = { model: y[0], qty: y[1] }; }
+      return o;
+    }
+    return {
+      nextId: 5,
+      items: [
+        { id: 1, brand: 'HP', type: 'bw', bin: 'A-1', by: 'Демо', at: now - 2 * d, parts: P(['CF217A', 6]) },
+        { id: 2, brand: 'Brother', type: 'bw', bin: 'A-2', by: 'Демо', at: now - 5 * d, parts: P(['TN-2375', 4]) },
+        { id: 3, brand: 'HP', type: 'color', bin: 'B-1', by: 'Демо', at: now - 1 * d, parts: P(['CF410X', 3], ['CF411X', 1], ['CF413X', 2], ['CF412X', 0]) },
+        { id: 4, brand: 'Brother', type: 'color', bin: 'B-2', by: 'Демо', at: now - 9 * d, parts: P(['TN-241BK', 2], ['TN-241C', 2], ['TN-241M', 1], ['TN-241Y', 1]) }
+      ],
+      log: []
+    };
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var d = JSON.parse(raw); if (d && Array.isArray(d.items)) { d.log = d.log || []; return d; } }
+    } catch (e) {}
+    usedSeed = true;
+    return seed();
+  }
+  function save() { touched = true; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} push(); }
+  function operator() { try { return localStorage.getItem(OP_KEY) || ''; } catch (e) { return ''; } }
+
+  /* 3. Действия */
+  function stamp(item) { item.by = operator() || 'Не указан'; item.at = Date.now(); }
+  function logEntry(item, what) {
+    state.log.unshift({ t: Date.now(), by: operator() || 'Не указан', item: item.id, model: item.parts.k.model, what: what });
+    if (state.log.length > 500) state.log.length = 500;
+  }
+  function addItem(v) {
+    var it = { id: state.nextId++, brand: v.brand, type: v.type, bin: v.bin, parts: v.parts };
+    stamp(it); state.items.push(it); logEntry(it, 'Добавлен'); save(); render();
+  }
+  function updateItem(it, v) {
+    var ch = [];
+    colorsOf(v.type).forEach(function (c) {
+      var was = it.parts[c] ? it.parts[c].qty : null;
+      if (was !== v.parts[c].qty) ch.push(COLORS[c].toLowerCase() + ' ' + (was === null ? 'новый' : was) + ' → ' + v.parts[c].qty);
+    });
+    if (it.bin !== v.bin) ch.push('отсек ' + it.bin + ' → ' + v.bin);
+    it.brand = v.brand; it.type = v.type; it.bin = v.bin; it.parts = v.parts;
+    stamp(it); logEntry(it, ch.join(', ') || 'Карточка изменена'); save(); render();
+  }
+  function changeQty(it, color, delta) {
+    var p = it.parts[color], n = p.qty + delta; if (n < 0) return;
+    logEntry(it, COLORS[color].toLowerCase() + ' ' + p.qty + ' → ' + n);
+    p.qty = n; stamp(it); save(); render();
+  }
+  function removeItem(it) {
+    logEntry(it, 'Удалён'); state.items = state.items.filter(function (x) { return x !== it; }); save(); render();
+  }
+
+  /* 4. Отображение */
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fmt(t) { return new Date(t).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+  function dot(c) { return '<span class="dot" style="background:var(--' + c + ')"></span>'; }
+  function qtyHTML(it, c) {
+    var q = it.parts[c].qty;
+    return '<span class="qty' + (q === 0 ? ' zero' : '') + '"><button type="button" data-a="minus" data-id="' + it.id + '" data-c="' + c + '"' + (q === 0 ? ' disabled' : '') + ' aria-label="Минус один">−</button><b>' + q + '</b><button type="button" data-a="plus" data-id="' + it.id + '" data-c="' + c + '" aria-label="Плюс один">+</button></span>';
+  }
+  function modelHTML(m) { return m ? esc(m) : '<span class="nomodel">модель не указана</span>'; }
+  var CHEV = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l5 5 5-5"/></svg>';
+
+  function render() {
+    $('opName').textContent = operator() || 'имя не указано';
+    var all = state.items, total = 0, bw = 0, col = 0, low = 0;
+    all.forEach(function (i) {
+      colorsOf(i.type).forEach(function (c) {
+        var q = i.parts[c].qty; total += q;
+        if (i.type === 'bw') bw += q; else col += q;
+        if (q <= LOW) low++;
+      });
+    });
+    $('stats').innerHTML =
+      '<div class="stat"><small>Всего штук</small><b>' + total + '</b></div>' +
+      '<div class="stat"><small>Чёрно-белые</small><b>' + bw + '</b></div>' +
+      '<div class="stat"><small>Цветные</small><b>' + col + '</b></div>' +
+      '<div class="stat"><small>Заканчиваются</small><b>' + low + '</b></div>';
+
+    var q = $('q').value.trim().toLowerCase(), ft = $('fType').value;
+    var list = all.filter(function (i) {
+      if (ft && i.type !== ft) return false;
+      if (!q) return true;
+      var hay = i.brand + ' ' + i.bin + ' ' + colorsOf(i.type).map(function (c) { return i.parts[c].model; }).join(' ');
+      return hay.toLowerCase().indexOf(q) >= 0;
+    }).sort(function (a, b) { return a.parts.k.model.localeCompare(b.parts.k.model, 'ru', { numeric: true }); });
+
+    var html = '';
+    list.forEach(function (i) {
+      var isColor = i.type === 'color', isOpen = isColor && open[i.id];
+      html += '<tr class="main">' +
+        '<td><div class="mcell">' +
+          (isColor ? '<button class="chev" type="button" data-a="toggle" data-id="' + i.id + '" aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-label="Показать остальные цвета" title="Остальные цвета">' + CHEV + '</button>' : '<span class="spacer30"></span>') +
+          '<div><div class="model">' + modelHTML(i.parts.k.model) + '</div><div class="brand">' + esc(i.brand) + '</div></div></div></td>' +
+        '<td><span class="tag ' + (isColor ? '' : 'bw') + '">' + TYPES[i.type] + '</span></td>' +
+        '<td>' + dot('k') + COLORS.k + '</td>' +
+        '<td>' + qtyHTML(i, 'k') + '</td>' +
+        '<td><span class="bin">' + esc(i.bin) + '</span></td>' +
+        '<td class="meta"><b>' + esc(i.by) + '</b>' + fmt(i.at) + '</td>' +
+        '<td><button class="btn" type="button" data-a="edit" data-id="' + i.id + '">Изменить</button></td></tr>';
+      if (isOpen) {
+        ['c', 'm', 'y'].forEach(function (c) {
+          html += '<tr class="sub' + (c === 'y' ? ' last' : '') + '"><td><span class="model">' + modelHTML(i.parts[c].model) + '</span></td><td></td>' +
+            '<td>' + dot(c) + COLORS[c] + '</td><td>' + qtyHTML(i, c) + '</td><td></td><td></td><td></td></tr>';
+        });
+      }
+    });
+    $('rows').innerHTML = html || '<tr><td colspan="7" class="empty">' + (all.length ? 'Ничего не найдено.' : 'Склад пуст. Нажмите «Добавить картридж».') + '</td></tr>';
+  }
+
+  /* 5. Окна */
+  function closeModal() { $('overlay').hidden = true; $('overlay').innerHTML = ''; }
+  function openModal(title, body, submitText, onSubmit, onDelete) {
+    var ov = $('overlay');
+    ov.innerHTML = '<div class="modal" role="dialog" aria-modal="true"><h2>' + esc(title) + '</h2><form id="mf" novalidate>' + body +
+      '<div class="err" id="me" hidden></div><div class="row"><button class="btn primary" type="submit">' + esc(submitText) + '</button><button class="btn" type="button" id="mc">Отмена</button>' +
+      (onDelete ? '<button class="btn danger spacer" type="button" id="md">Удалить</button>' : '') + '</div></form></div>';
+    ov.hidden = false;
+    var f = $('mf'), first = f.querySelector('input,select'); if (first) first.focus();
+    $('mc').onclick = closeModal;
+    f.onsubmit = function (e) {
+      e.preventDefault();
+      var v = {}; Array.prototype.forEach.call(f.elements, function (el) { if (el.name) v[el.name] = el.value; });
+      var msg = onSubmit(v);
+      if (msg) { $('me').textContent = msg; $('me').hidden = false; } else closeModal();
+    };
+    if (onDelete) {
+      var armed = false;
+      $('md').onclick = function () { if (!armed) { armed = true; this.textContent = 'Точно удалить?'; return; } onDelete(); closeModal(); };
+    }
+    return f;
+  }
+  function fld(label, name, val, attrs, full) {
+    return '<label class="field' + (full ? ' full' : '') + '"><span>' + label + '</span><input name="' + name + '" value="' + esc(val) + '" ' + (attrs || '') + '></label>';
+  }
+
+  function openItemModal(it) {
+    var type = it ? it.type : 'bw';
+    var rows = ORDER.map(function (c) {
+      var p = it && it.parts[c] ? it.parts[c] : { model: '', qty: 0 };
+      return '<div class="prow" data-c="' + c + '"' + (colorsOf(type).indexOf(c) < 0 ? ' hidden' : '') + '><span class="plabel">' + dot(c) + COLORS[c] + '</span>' +
+        '<input name="model_' + c + '" value="' + esc(p.model) + '" maxlength="30" placeholder="Модель" aria-label="Модель, ' + COLORS[c].toLowerCase() + '">' +
+        '<input name="qty_' + c + '" type="number" min="0" step="1" value="' + p.qty + '" inputmode="numeric" aria-label="Количество, ' + COLORS[c].toLowerCase() + '"></div>';
+    }).join('');
+    var body = '<div class="form">' +
+      '<label class="field"><span>Тип</span><select name="type" id="fType2">' + Object.keys(TYPES).map(function (k) { return '<option value="' + k + '"' + (k === type ? ' selected' : '') + '>' + TYPES[k] + '</option>'; }).join('') + '</select></label>' +
+      fld('Бренд', 'brand', it ? it.brand : '', 'maxlength="30"') +
+      fld('Отсек', 'bin', it ? it.bin : '', 'maxlength="12" placeholder="Например A-1"', true) +
+      '</div><div class="parts"><div class="phead"><span>Цвет</span><span>Модель</span><span>Шт.</span></div>' + rows + '</div>';
+
+    var f = openModal(it ? 'Изменить картридж' : 'Новый картридж', body, it ? 'Сохранить' : 'Добавить', function (v) {
+      var bin = v.bin.trim().toUpperCase(), parts = {}, err = null;
+      if (!bin) return 'Укажите отсек.';
+      colorsOf(v.type).forEach(function (c) {
+        var m = (v['model_' + c] || '').trim(), qty = parseInt(v['qty_' + c], 10);
+        if (c === 'k' && !m) err = err || 'Укажите модель' + (v.type === 'color' ? ' чёрного картриджа.' : '.');
+        if (!(qty >= 0)) err = err || 'Количество (' + COLORS[c].toLowerCase() + ') должно быть числом от 0.';
+        parts[c] = { model: m, qty: qty };
+      });
+      if (err) return err;
+      if (!operator()) return 'Сначала укажите своё имя (ссылка «сменить» вверху страницы).';
+      var data = { brand: v.brand.trim(), type: v.type, bin: bin, parts: parts };
+      if (it) updateItem(it, data); else addItem(data);
+      return null;
+    }, it ? function () { removeItem(it); } : null);
+
+    f.querySelector('#fType2').onchange = function () {
+      var show = colorsOf(this.value);
+      Array.prototype.forEach.call(f.querySelectorAll('.prow'), function (r) { r.hidden = show.indexOf(r.getAttribute('data-c')) < 0; });
+    };
+  }
+  function openOperatorModal() {
+    openModal('Ваше имя', '<div class="form"><div class="field full"><span>Оно записывается рядом с каждой правкой</span><input name="name" value="' + esc(operator()) + '" maxlength="30" placeholder="Например, Рашад"></div></div>', 'Сохранить', function (v) {
+      var n = v.name.trim(); if (!n) return 'Введите имя.';
+      try { localStorage.setItem(OP_KEY, n); } catch (e) {}
+      render(); return null;
+    });
+  }
+
+  /* События */
+  function needName() { if (operator()) return false; openOperatorModal(); return true; }
+  $('addBtn').onclick = function () { if (!needName()) openItemModal(null); };
+  $('opChange').onclick = openOperatorModal;
+  $('q').oninput = render;
+  $('fType').onchange = render;
+  $('overlay').addEventListener('mousedown', function (e) { if (e.target === this) closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+  $('rows').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-a]'); if (!b) return;
+    var id = parseInt(b.getAttribute('data-id'), 10), a = b.getAttribute('data-a'), c = b.getAttribute('data-c');
+    var it = state.items.filter(function (x) { return x.id === id; })[0]; if (!it) return;
+    if (a === 'toggle') { open[id] = !open[id]; render(); return; }
+    if (needName()) return;
+    if (a === 'edit') openItemModal(it);
+    else changeQty(it, c, a === 'plus' ? 1 : -1);
+  });
+
+  /* 6. Синхронизация с сервером (общие данные для всех пользователей).
+     Если сервер недоступен (например, файл открыт напрямую) — работает локально, как раньше. */
+  function setSync(txt, bad) { var e = $('sync'); if (e) { e.textContent = txt; e.className = 'sync' + (bad ? ' bad' : ''); } }
+  function api(method, path, body) {
+    return fetch(path, {
+      method: method, cache: 'no-store',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        var j = null; try { j = JSON.parse(t); } catch (e) {}
+        return { ok: r.ok, status: r.status, json: j };
+      });
+    });
+  }
+  function adopt(s) {
+    s.log = s.log || [];
+    if (typeof s.nextId !== 'number') s.nextId = s.items.reduce(function (m, i) { return Math.max(m, i.id); }, 0) + 1;
+    state = s;
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function pull() {
+    return api('GET', '/api/state').then(function (r) {
+      if (!r.ok || !r.json) throw new Error('http ' + r.status + (r.json && r.json.error ? ': ' + r.json.error : ''));
+      rev = r.json.rev;
+      if (r.json.state && Array.isArray(r.json.state.items)) {
+        adopt(r.json.state); setSync('Синхронизировано'); render();
+      } else {
+        // на сервере ещё пусто — загружаем то, что есть здесь (демо-данные не загружаем)
+        if (usedSeed && !touched) state = { nextId: 1, items: [], log: [] };
+        render(); dirty = true; push();
+      }
+    });
+  }
+  function push() {
+    if (rev === null) return;
+    if (pushing) { dirty = true; return; }
+    pushing = true; dirty = false; setSync('Сохранение…');
+    api('PUT', '/api/state', { baseRev: rev, state: state }).then(function (r) {
+      pushing = false;
+      if (r.ok && r.json && r.json.rev !== undefined) {
+        rev = r.json.rev; setSync('Сохранено'); if (dirty) push();
+      } else if (r.status === 409 && r.json && r.json.state && Array.isArray(r.json.state.items)) {
+        rev = r.json.rev; adopt(r.json.state); dirty = false; render();
+        setSync('Данные изменил другой человек — ваша последняя правка не сохранилась, повторите её', true);
+      } else {
+        dirty = true; setSync('Не сохранено: ошибка сервера' + (r.json && r.json.error ? ' (' + r.json.error + ')' : ''), true);
+      }
+    }).catch(function () { pushing = false; dirty = true; setSync('Нет связи с сервером — повторю', true); });
+  }
+  function poll() {
+    if (pushing) return;
+    if (rev === null) { if (!touched) pull().catch(function () {}); return; }
+    if (dirty) { push(); return; }
+    if (!$('overlay').hidden) return; // не подменяем данные, пока открыто окно
+    api('GET', '/api/rev').then(function (r) {
+      if (r.ok && r.json && r.json.rev !== rev) return pull();
+    }).catch(function () {});
+  }
+  setInterval(poll, 5000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+
+  render();
+  if (!operator()) openOperatorModal();
+  pull().catch(function (e) { setSync('Нет связи с сервером — данные только на этом устройстве', true); });
+})();
+</script>
+</body>
+</html>
