@@ -161,7 +161,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 
   /* 2. Данные и хранение */
   var KEY = 'cartridges-simple-v2', OP_KEY = 'cartridges-operator';
-  var usedSeed = false, touched = false, rev = null, pushing = false, dirty = false;
+  var usedSeed = false, rev = null, pushing = false, dirty = false;
   var state = load();
   var open = {}; // какие цветные комплекты раскрыты
 
@@ -192,36 +192,56 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     usedSeed = true;
     return seed();
   }
-  function save() { touched = true; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} push(); }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
   function operator() { try { return localStorage.getItem(OP_KEY) || ''; } catch (e) { return ''; } }
 
-  /* 3. Действия */
-  function stamp(item) { item.by = operator() || 'Не указан'; item.at = Date.now(); }
-  function logEntry(item, what) {
-    state.log.unshift({ t: Date.now(), by: operator() || 'Не указан', item: item.id, model: item.parts.k.model, what: what });
-    if (state.log.length > 500) state.log.length = 500;
+  /* 3. Действия. Каждая правка — функция op(st), которую можно заново применить
+     к свежим данным с сервера, если кто-то изменил их одновременно: правка не теряется. */
+  var pending = [], inflight = 0, conflicts = 0;
+  function byName() { return operator() || 'Не указан'; }
+  function find(st, id) { return st.items.filter(function (x) { return x.id === id; })[0]; }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function log(st, it, by, at, what) {
+    st.log.unshift({ t: at, by: by, item: it.id, model: it.parts.k.model, what: what });
+    if (st.log.length > 500) st.log.length = 500;
   }
+  function commit(op) { op(state); pending.push(op); save(); render(); push(); }
   function addItem(v) {
-    var it = { id: state.nextId++, brand: v.brand, type: v.type, bin: v.bin, parts: v.parts };
-    stamp(it); state.items.push(it); logEntry(it, 'Добавлен'); save(); render();
-  }
-  function updateItem(it, v) {
-    var ch = [];
-    colorsOf(v.type).forEach(function (c) {
-      var was = it.parts[c] ? it.parts[c].qty : null;
-      if (was !== v.parts[c].qty) ch.push(COLORS[c].toLowerCase() + ' ' + (was === null ? 'новый' : was) + ' → ' + v.parts[c].qty);
+    var by = byName(), at = Date.now();
+    commit(function (st) {
+      var it = { id: st.nextId++, brand: v.brand, type: v.type, bin: v.bin, parts: clone(v.parts), by: by, at: at };
+      st.items.push(it); log(st, it, by, at, 'Добавлен');
     });
-    if (it.bin !== v.bin) ch.push('отсек ' + it.bin + ' → ' + v.bin);
-    it.brand = v.brand; it.type = v.type; it.bin = v.bin; it.parts = v.parts;
-    stamp(it); logEntry(it, ch.join(', ') || 'Карточка изменена'); save(); render();
   }
-  function changeQty(it, color, delta) {
-    var p = it.parts[color], n = p.qty + delta; if (n < 0) return;
-    logEntry(it, COLORS[color].toLowerCase() + ' ' + p.qty + ' → ' + n);
-    p.qty = n; stamp(it); save(); render();
+  function updateItem(id, v) {
+    var by = byName(), at = Date.now();
+    commit(function (st) {
+      var it = find(st, id); if (!it) return;
+      var ch = [];
+      colorsOf(v.type).forEach(function (c) {
+        var was = it.parts[c] ? it.parts[c].qty : null;
+        if (was !== v.parts[c].qty) ch.push(COLORS[c].toLowerCase() + ' ' + (was === null ? 'новый' : was) + ' → ' + v.parts[c].qty);
+      });
+      if (it.bin !== v.bin) ch.push('отсек ' + it.bin + ' → ' + v.bin);
+      it.brand = v.brand; it.type = v.type; it.bin = v.bin; it.parts = clone(v.parts);
+      it.by = by; it.at = at; log(st, it, by, at, ch.join(', ') || 'Карточка изменена');
+    });
   }
-  function removeItem(it) {
-    logEntry(it, 'Удалён'); state.items = state.items.filter(function (x) { return x !== it; }); save(); render();
+  function changeQty(id, color, delta) {
+    var by = byName(), at = Date.now();
+    commit(function (st) {
+      var it = find(st, id); if (!it || !it.parts[color]) return;
+      var p = it.parts[color], n = p.qty + delta; if (n < 0) return;
+      log(st, it, by, at, COLORS[color].toLowerCase() + ' ' + p.qty + ' → ' + n);
+      p.qty = n; it.by = by; it.at = at;
+    });
+  }
+  function removeItem(id) {
+    var by = byName(), at = Date.now();
+    commit(function (st) {
+      var it = find(st, id); if (!it) return;
+      log(st, it, by, at, 'Удалён'); st.items = st.items.filter(function (x) { return x !== it; });
+    });
   }
 
   /* 4. Отображение */
@@ -335,9 +355,9 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       if (err) return err;
       if (!operator()) return 'Сначала укажите своё имя (ссылка «сменить» вверху страницы).';
       var data = { brand: v.brand.trim(), type: v.type, bin: bin, parts: parts };
-      if (it) updateItem(it, data); else addItem(data);
+      if (it) updateItem(it.id, data); else addItem(data);
       return null;
-    }, it ? function () { removeItem(it); } : null);
+    }, it ? function () { removeItem(it.id); } : null);
 
     f.querySelector('#fType2').onchange = function () {
       var show = colorsOf(this.value);
@@ -367,7 +387,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     if (a === 'toggle') { open[id] = !open[id]; render(); return; }
     if (needName()) return;
     if (a === 'edit') openItemModal(it);
-    else changeQty(it, c, a === 'plus' ? 1 : -1);
+    else changeQty(it.id, c, a === 'plus' ? 1 : -1);
   });
 
   /* 6. Синхронизация с сервером (общие данные для всех пользователей).
@@ -387,46 +407,54 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   }
   function adopt(s) {
     s.log = s.log || [];
-    if (typeof s.nextId !== 'number') s.nextId = s.items.reduce(function (m, i) { return Math.max(m, i.id); }, 0) + 1;
+    var top = s.items.reduce(function (m, i) { return Math.max(m, i.id); }, 0) + 1;
+    if (typeof s.nextId !== 'number' || s.nextId < top) s.nextId = top;
     state = s;
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
   }
+  function replay() { pending.forEach(function (op) { op(state); }); }
   function pull() {
     return api('GET', '/api/state').then(function (r) {
       if (!r.ok || !r.json) throw new Error('http ' + r.status + (r.json && r.json.error ? ': ' + r.json.error : ''));
       rev = r.json.rev;
       if (r.json.state && Array.isArray(r.json.state.items)) {
-        adopt(r.json.state); setSync('Синхронизировано'); render();
+        adopt(r.json.state); replay(); render();
+        if (pending.length) push(); else setSync('Синхронизировано');
       } else {
         // на сервере ещё пусто — загружаем то, что есть здесь (демо-данные не загружаем)
-        if (usedSeed && !touched) state = { nextId: 1, items: [], log: [] };
-        render(); dirty = true; push();
+        if (usedSeed && !pending.length) state = { nextId: 1, items: [], log: [] };
+        pending = []; inflight = 0; render(); dirty = true; push();
       }
     });
   }
   function push() {
     if (rev === null) return;
     if (pushing) { dirty = true; return; }
-    pushing = true; dirty = false; setSync('Сохранение…');
+    if (!pending.length && !dirty) return;
+    pushing = true; dirty = false; inflight = pending.length; setSync('Сохранение…');
     api('PUT', '/api/state', { baseRev: rev, state: state }).then(function (r) {
       pushing = false;
       if (r.ok && r.json && r.json.rev !== undefined) {
-        rev = r.json.rev; setSync('Сохранено'); if (dirty) push();
+        rev = r.json.rev; conflicts = 0;
+        pending = pending.slice(inflight); inflight = 0;
+        if (pending.length) push(); else setSync('Сохранено');
       } else if (r.status === 409 && r.json && r.json.state && Array.isArray(r.json.state.items)) {
-        rev = r.json.rev; adopt(r.json.state); dirty = false; render();
-        setSync('Данные изменил другой человек — ваша последняя правка не сохранилась, повторите её', true);
+        // кто-то успел раньше: берём его данные и накладываем свои правки поверх
+        rev = r.json.rev; adopt(r.json.state); replay(); inflight = 0; render();
+        if (++conflicts > 5) { dirty = true; setSync('Много одновременных правок — повторяю…', true); }
+        else push();
       } else {
-        dirty = true; setSync('Не сохранено: ошибка сервера' + (r.json && r.json.error ? ' (' + r.json.error + ')' : ''), true);
+        dirty = true; inflight = 0;
+        setSync('Не сохранено: ошибка сервера' + (r.json && r.json.error ? ' (' + r.json.error + ')' : ''), true);
       }
-    }).catch(function () { pushing = false; dirty = true; setSync('Нет связи с сервером — повторю', true); });
+    }).catch(function () { pushing = false; dirty = true; inflight = 0; setSync('Нет связи с сервером — повторю', true); });
   }
   function poll() {
     if (pushing) return;
-    if (rev === null) { if (!touched) pull().catch(function () {}); return; }
-    if (dirty) { push(); return; }
-    if (!$('overlay').hidden) return; // не подменяем данные, пока открыто окно
+    if (rev === null) { pull().catch(function () {}); return; }
+    if (dirty || pending.length) { push(); return; }
     api('GET', '/api/rev').then(function (r) {
-      if (r.ok && r.json && r.json.rev !== rev) return pull();
+      if (r.ok && r.json && r.json.rev !== rev && !pushing && !pending.length) return pull();
     }).catch(function () {});
   }
   setInterval(poll, 5000);
