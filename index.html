@@ -101,6 +101,17 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .row .spacer { margin-left: auto; }
 @media (max-width: 480px) { .form { grid-template-columns: 1fr; } .phead, .prow { grid-template-columns: 64px minmax(0, 1fr) 92px 56px; gap: 6px; } .plabel { font-size: 12px; } }
+.acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.hist { max-width: 560px; }
+.hday { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 16px 0 6px; }
+.hday:first-of-type { margin-top: 4px; }
+.hrow { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.35; }
+.hrow .hm { font-weight: 500; }
+.hrow .hw { margin-top: 2px; }
+.hrow .hw .chg { margin-right: 12px; white-space: nowrap; }
+.hrow .hw .dot { width: 10px; height: 10px; margin-right: 6px; }
+.hrow .hby { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.hempty { color: var(--muted); padding: 12px 0; }
 .sync { color: var(--muted); font-size: 12px; margin-left: 10px; }
 .sync.bad { color: var(--crit); font-weight: 600; }
 </style>
@@ -112,7 +123,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       <h1><span class="logo" aria-hidden="true"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--k)"></i></span>Склад картриджей</h1>
       <div class="who">Вы работаете как: <b id="opName"></b><button class="link" id="opChange" type="button">сменить</button><span class="sync" id="sync"></span></div>
     </div>
-    <button class="btn primary" id="addBtn" type="button">+ Добавить картридж</button>
+    <div class="acts"><button class="btn primary" id="addBtn" type="button">+ Добавить картридж</button><button class="btn" id="histBtn" type="button">История за месяц</button></div>
   </header>
 
   <section class="stats" id="stats"></section>
@@ -215,9 +226,12 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   function byName() { return operator() || 'Не указан'; }
   function find(st, id) { return st.items.filter(function (x) { return x.id === id; })[0]; }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
-  function log(st, it, by, at, what) {
-    st.log.unshift({ t: at, by: by, item: it.id, model: it.parts.k.model, what: what });
-    if (st.log.length > 500) st.log.length = 500;
+  function log(st, it, by, at, what, chg, oth) {
+    var e = { t: at, by: by, item: it.id, model: it.parts.k.model, type: it.type, what: what };
+    if (chg && chg.length) e.chg = chg;
+    if (oth) e.oth = oth;
+    st.log.unshift(e);
+    if (st.log.length > 3000) st.log.length = 3000;
   }
   function commit(op) { op(state); pending.push(op); save(); render(); push(); }
   function addItem(v) {
@@ -231,17 +245,17 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     var by = byName(), at = Date.now();
     commit(function (st) {
       var it = find(st, id); if (!it) return;
-      var ch = [], chg = [];
+      var ch = [], chg = [], oth = [];
       colorsOf(v.type).forEach(function (c) {
         var was = it.parts[c] ? it.parts[c].qty : null;
         var wasKind = it.parts[c] ? kindOf(it.parts[c]) : null;
-        if (wasKind && wasKind !== v.parts[c].kind) ch.push(COLORS[c].toLowerCase() + ' ' + KINDS[wasKind].toLowerCase() + ' → ' + KINDS[v.parts[c].kind].toLowerCase());
-        if (was !== null && was !== v.parts[c].qty) chg.push({ c: c, d: v.parts[c].qty - was });
+        if (wasKind && wasKind !== v.parts[c].kind) { var kt = COLORS[c].toLowerCase() + ' ' + KINDS[wasKind].toLowerCase() + ' → ' + KINDS[v.parts[c].kind].toLowerCase(); ch.push(kt); oth.push(kt); }
+        if (was !== null && was !== v.parts[c].qty) chg.push({ c: c, d: v.parts[c].qty - was, n: v.parts[c].qty });
         if (was !== v.parts[c].qty) ch.push(COLORS[c].toLowerCase() + ' ' + (was === null ? 'новый' : was) + ' → ' + v.parts[c].qty);
       });
-      if (it.bin !== v.bin) ch.push('отсек ' + it.bin + ' → ' + v.bin);
+      if (it.bin !== v.bin) { var bt = 'отсек ' + it.bin + ' → ' + v.bin; ch.push(bt); oth.push(bt); }
       it.brand = v.brand; it.type = v.type; it.bin = v.bin; it.parts = clone(v.parts);
-      it.by = by; it.at = at; it.chg = chg; log(st, it, by, at, ch.join(', ') || 'Карточка изменена');
+      it.by = by; it.at = at; it.chg = chg; log(st, it, by, at, ch.join(', ') || 'Карточка изменена', chg, oth.join(', '));
     });
   }
   function changeQty(id, color, delta) {
@@ -249,7 +263,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     commit(function (st) {
       var it = find(st, id); if (!it || !it.parts[color]) return;
       var p = it.parts[color], n = p.qty + delta; if (n < 0) return;
-      log(st, it, by, at, COLORS[color].toLowerCase() + ' ' + p.qty + ' → ' + n);
+      log(st, it, by, at, COLORS[color].toLowerCase() + ' ' + p.qty + ' → ' + n, [{ c: color, d: delta, n: n }]);
       p.qty = n; it.by = by; it.at = at; it.chg = [{ c: color, d: delta }];
     });
   }
@@ -387,6 +401,25 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       Array.prototype.forEach.call(f.querySelectorAll('.prow'), function (r) { r.hidden = show.indexOf(r.getAttribute('data-c')) < 0; });
     };
   }
+  function openHistoryModal() {
+    var from = Date.now() - 30 * 24 * 3600 * 1000;
+    var list = (state.log || []).filter(function (e) { return e.t >= from; }).sort(function (a, b) { return b.t - a.t; });
+    var html = '', day = '';
+    list.forEach(function (e) {
+      var d = new Date(e.t).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      if (d !== day) { day = d; html += '<div class="hday">' + d + '</div>'; }
+      var tm = new Date(e.t).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      var what;
+      if (e.type === 'color' && e.chg && e.chg.length) {
+        what = e.chg.map(function (x) { return '<span class="chg">' + dot(x.c) + COLORS[x.c] + ' ' + (x.d > 0 ? '+' : '−') + Math.abs(x.d) + (typeof x.n === 'number' ? ' (стало ' + x.n + ')' : '') + '</span>'; }).join('') + (e.oth ? esc(e.oth) : '');
+      } else what = esc(e.what);
+      html += '<div class="hrow"><div class="hm">' + (e.model ? esc(e.model) : '<span class="nomodel">модель не указана</span>') + '</div><div class="hw">' + what + '</div><div class="hby">' + tm + ' · ' + esc(e.by || '') + '</div></div>';
+    });
+    var ov = $('overlay');
+    ov.innerHTML = '<div class="modal hist" role="dialog" aria-modal="true"><h2>История за последний месяц</h2>' + (html || '<div class="hempty">За последний месяц изменений нет.</div>') + '<div class="row"><button class="btn" type="button" id="hc">Закрыть</button></div></div>';
+    ov.hidden = false;
+    $('hc').onclick = closeModal;
+  }
   function openOperatorModal() {
     openModal('Ваше имя', '<div class="form"><div class="field full"><span>Оно записывается рядом с каждой правкой</span><input name="name" value="' + esc(operator()) + '" maxlength="30" placeholder="Например, Рашад"></div></div>', 'Сохранить', function (v) {
       var n = v.name.trim(); if (!n) return 'Введите имя.';
@@ -399,6 +432,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   function needName() { if (operator()) return false; openOperatorModal(); return true; }
   $('addBtn').onclick = function () { if (!needName()) openItemModal(null); };
   $('opChange').onclick = openOperatorModal;
+  $('histBtn').onclick = openHistoryModal;
   $('q').oninput = render;
   $('fType').onchange = render;
   $('overlay').addEventListener('mousedown', function (e) { if (e.target === this) closeModal(); });
