@@ -89,13 +89,14 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 .field span, .phead span { font-size: 12px; color: var(--muted); }
 .field input, .field select, .prow input { height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); width: 100%; min-width: 0; }
 .parts { display: grid; gap: 8px; margin-top: 14px; }
-.phead, .prow { display: grid; grid-template-columns: 110px minmax(0, 1fr) 84px; gap: 8px; align-items: center; }
+.phead, .prow { display: grid; grid-template-columns: 100px minmax(0, 1fr) 112px 72px; gap: 8px; align-items: center; }
+.prow select { height: 40px; padding: 0 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); width: 100%; min-width: 0; }
 .prow[hidden] { display: none; }
 .plabel { display: flex; align-items: center; font-size: 14px; }
 .err { background: var(--crit-bg); color: var(--crit); padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-top: 14px; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .row .spacer { margin-left: auto; }
-@media (max-width: 480px) { .form { grid-template-columns: 1fr; } .phead, .prow { grid-template-columns: 88px minmax(0, 1fr) 72px; } }
+@media (max-width: 480px) { .form { grid-template-columns: 1fr; } .phead, .prow { grid-template-columns: 64px minmax(0, 1fr) 92px 56px; gap: 6px; } .plabel { font-size: 12px; } }
 .sync { color: var(--muted); font-size: 12px; margin-left: 10px; }
 .sync.bad { color: var(--crit); font-weight: 600; }
 </style>
@@ -156,6 +157,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   /* 1. Справочники */
   var TYPES = { bw: 'Чёрно-белый', color: 'Цветной' };
   var COLORS = { k: 'Чёрный', c: 'Голубой', m: 'Пурпурный', y: 'Жёлтый' };
+  var KINDS = { orig: 'Оригинал', dup: 'Дубликат' };
   var ORDER = ['k', 'c', 'm', 'y'];
   var LOW = 2; // меньше или равно — считать «заканчивается»
 
@@ -165,6 +167,14 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   var state = load();
   var open = {}; // какие цветные комплекты раскрыты
 
+  function kindOf(p) { return p && p.kind === 'dup' ? 'dup' : 'orig'; }
+  function subline(it, c, withBrand) {
+    var a = [];
+    if (withBrand && it.brand) a.push(esc(it.brand));
+    a.push(KINDS[kindOf(it.parts[c])]);
+    a.push(TYPES[it.type]);
+    return a.join(' · ');
+  }
   function colorsOf(type) { return type === 'bw' ? ['k'] : ORDER; }
   function seed() {
     var now = Date.now(), d = 864e5;
@@ -220,6 +230,8 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       var ch = [];
       colorsOf(v.type).forEach(function (c) {
         var was = it.parts[c] ? it.parts[c].qty : null;
+        var wasKind = it.parts[c] ? kindOf(it.parts[c]) : null;
+        if (wasKind && wasKind !== v.parts[c].kind) ch.push(COLORS[c].toLowerCase() + ' ' + KINDS[wasKind].toLowerCase() + ' → ' + KINDS[v.parts[c].kind].toLowerCase());
         if (was !== v.parts[c].qty) ch.push(COLORS[c].toLowerCase() + ' ' + (was === null ? 'новый' : was) + ' → ' + v.parts[c].qty);
       });
       if (it.bin !== v.bin) ch.push('отсек ' + it.bin + ' → ' + v.bin);
@@ -286,7 +298,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       html += '<tr class="main">' +
         '<td><div class="mcell">' +
           (isColor ? '<button class="chev" type="button" data-a="toggle" data-id="' + i.id + '" aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-label="Показать остальные цвета" title="Остальные цвета">' + CHEV + '</button>' : '<span class="spacer30"></span>') +
-          '<div><div class="model">' + modelHTML(i.parts.k.model) + '</div><div class="brand">' + esc(i.brand) + '</div></div></div></td>' +
+          '<div><div class="model">' + modelHTML(i.parts.k.model) + '</div><div class="brand">' + subline(i, 'k', true) + '</div></div></div></td>' +
         '<td><span class="tag ' + (isColor ? '' : 'bw') + '">' + TYPES[i.type] + '</span></td>' +
         '<td>' + dot('k') + COLORS.k + '</td>' +
         '<td>' + qtyHTML(i, 'k') + '</td>' +
@@ -295,7 +307,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
         '<td><button class="btn" type="button" data-a="edit" data-id="' + i.id + '">Изменить</button></td></tr>';
       if (isOpen) {
         ['c', 'm', 'y'].forEach(function (c) {
-          html += '<tr class="sub' + (c === 'y' ? ' last' : '') + '"><td><span class="model">' + modelHTML(i.parts[c].model) + '</span></td><td></td>' +
+          html += '<tr class="sub' + (c === 'y' ? ' last' : '') + '"><td><div class="model">' + modelHTML(i.parts[c].model) + '</div><div class="brand">' + subline(i, c, false) + '</div></td><td></td>' +
             '<td>' + dot(c) + COLORS[c] + '</td><td>' + qtyHTML(i, c) + '</td><td></td><td></td><td></td></tr>';
         });
       }
@@ -332,16 +344,17 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   function openItemModal(it) {
     var type = it ? it.type : 'bw';
     var rows = ORDER.map(function (c) {
-      var p = it && it.parts[c] ? it.parts[c] : { model: '', qty: 0 };
+      var p = it && it.parts[c] ? it.parts[c] : { model: '', qty: 0, kind: 'orig' };
       return '<div class="prow" data-c="' + c + '"' + (colorsOf(type).indexOf(c) < 0 ? ' hidden' : '') + '><span class="plabel">' + dot(c) + COLORS[c] + '</span>' +
         '<input name="model_' + c + '" value="' + esc(p.model) + '" maxlength="30" placeholder="Модель" aria-label="Модель, ' + COLORS[c].toLowerCase() + '">' +
+        '<select name="kind_' + c + '" aria-label="Оригинал или дубликат, ' + COLORS[c].toLowerCase() + '">' + Object.keys(KINDS).map(function (k) { return '<option value="' + k + '"' + (kindOf(p) === k ? ' selected' : '') + '>' + KINDS[k] + '</option>'; }).join('') + '</select>' +
         '<input name="qty_' + c + '" type="number" min="0" step="1" value="' + p.qty + '" inputmode="numeric" aria-label="Количество, ' + COLORS[c].toLowerCase() + '"></div>';
     }).join('');
     var body = '<div class="form">' +
       '<label class="field"><span>Тип</span><select name="type" id="fType2">' + Object.keys(TYPES).map(function (k) { return '<option value="' + k + '"' + (k === type ? ' selected' : '') + '>' + TYPES[k] + '</option>'; }).join('') + '</select></label>' +
       fld('Бренд', 'brand', it ? it.brand : '', 'maxlength="30"') +
       fld('Отсек', 'bin', it ? it.bin : '', 'maxlength="12" placeholder="Например A-1"', true) +
-      '</div><div class="parts"><div class="phead"><span>Цвет</span><span>Модель</span><span>Шт.</span></div>' + rows + '</div>';
+      '</div><div class="parts"><div class="phead"><span>Цвет</span><span>Модель</span><span>Вид</span><span>Шт.</span></div>' + rows + '</div>';
 
     var f = openModal(it ? 'Изменить картридж' : 'Новый картридж', body, it ? 'Сохранить' : 'Добавить', function (v) {
       var bin = v.bin.trim().toUpperCase(), parts = {}, err = null;
@@ -350,7 +363,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
         var m = (v['model_' + c] || '').trim(), qty = parseInt(v['qty_' + c], 10);
         if (c === 'k' && !m) err = err || 'Укажите модель' + (v.type === 'color' ? ' чёрного картриджа.' : '.');
         if (!(qty >= 0)) err = err || 'Количество (' + COLORS[c].toLowerCase() + ') должно быть числом от 0.';
-        parts[c] = { model: m, qty: qty };
+        parts[c] = { model: m, qty: qty, kind: v['kind_' + c] === 'dup' ? 'dup' : 'orig' };
       });
       if (err) return err;
       if (!operator()) return 'Сначала укажите своё имя (ссылка «сменить» вверху страницы).';
