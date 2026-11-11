@@ -77,6 +77,8 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 .qty.zero b { color: var(--crit); }
 .bin { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 500; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
 .meta { color: var(--muted); font-size: 13px; line-height: 1.3; }
+.meta .chg { display: block; color: var(--fg); margin-top: 2px; white-space: nowrap; }
+.meta .chg .dot { width: 10px; height: 10px; margin-right: 6px; }
 .meta b { color: var(--fg); font-weight: 500; display: block; }
 .empty { text-align: center; color: var(--muted); padding: 32px 16px; white-space: normal; }
 
@@ -229,16 +231,17 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     var by = byName(), at = Date.now();
     commit(function (st) {
       var it = find(st, id); if (!it) return;
-      var ch = [];
+      var ch = [], chg = [];
       colorsOf(v.type).forEach(function (c) {
         var was = it.parts[c] ? it.parts[c].qty : null;
         var wasKind = it.parts[c] ? kindOf(it.parts[c]) : null;
         if (wasKind && wasKind !== v.parts[c].kind) ch.push(COLORS[c].toLowerCase() + ' ' + KINDS[wasKind].toLowerCase() + ' → ' + KINDS[v.parts[c].kind].toLowerCase());
+        if (was !== null && was !== v.parts[c].qty) chg.push({ c: c, d: v.parts[c].qty - was });
         if (was !== v.parts[c].qty) ch.push(COLORS[c].toLowerCase() + ' ' + (was === null ? 'новый' : was) + ' → ' + v.parts[c].qty);
       });
       if (it.bin !== v.bin) ch.push('отсек ' + it.bin + ' → ' + v.bin);
       it.brand = v.brand; it.type = v.type; it.bin = v.bin; it.parts = clone(v.parts);
-      it.by = by; it.at = at; log(st, it, by, at, ch.join(', ') || 'Карточка изменена');
+      it.by = by; it.at = at; it.chg = chg; log(st, it, by, at, ch.join(', ') || 'Карточка изменена');
     });
   }
   function changeQty(id, color, delta) {
@@ -247,7 +250,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       var it = find(st, id); if (!it || !it.parts[color]) return;
       var p = it.parts[color], n = p.qty + delta; if (n < 0) return;
       log(st, it, by, at, COLORS[color].toLowerCase() + ' ' + p.qty + ' → ' + n);
-      p.qty = n; it.by = by; it.at = at;
+      p.qty = n; it.by = by; it.at = at; it.chg = [{ c: color, d: delta }];
     });
   }
   function removeItem(id) {
@@ -266,6 +269,12 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   function qtyHTML(it, c) {
     var q = it.parts[c].qty;
     return '<span class="qty' + (q === 0 ? ' zero' : '') + '"><button type="button" data-a="minus" data-id="' + it.id + '" data-c="' + c + '"' + (q === 0 ? ' disabled' : '') + ' aria-label="Минус один">−</button><b>' + q + '</b><button type="button" data-a="plus" data-id="' + it.id + '" data-c="' + c + '" aria-label="Плюс один">+</button></span>';
+  }
+  function chgHTML(it) {
+    if (it.type !== 'color' || !it.chg || !it.chg.length) return '';
+    return it.chg.map(function (x) {
+      return '<span class="chg">' + dot(x.c) + COLORS[x.c] + ' ' + (x.d > 0 ? '+' : '−') + Math.abs(x.d) + '</span>';
+    }).join('');
   }
   function modelHTML(m) { return m ? esc(m) : '<span class="nomodel">модель не указана</span>'; }
   var CHEV = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l5 5 5-5"/></svg>';
@@ -303,7 +312,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
         '<td>' + dot('k') + COLORS.k + '</td>' +
         '<td>' + qtyHTML(i, 'k') + '</td>' +
         '<td><span class="bin">' + esc(i.bin) + '</span></td>' +
-        '<td class="meta"><b>' + esc(i.by) + '</b>' + fmt(i.at) + '</td>' +
+        '<td class="meta"><b>' + esc(i.by) + '</b>' + fmt(i.at) + chgHTML(i) + '</td>' +
         '<td><button class="btn" type="button" data-a="edit" data-id="' + i.id + '">Изменить</button></td></tr>';
       if (isOpen) {
         ['c', 'm', 'y'].forEach(function (c) {
