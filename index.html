@@ -158,9 +158,8 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   /* 1. Справочники */
   var TYPES = { bw: 'Чёрно-белый', color: 'Цветной' };
   var COLORS = { k: 'Чёрный', c: 'Голубой', m: 'Пурпурный', y: 'Жёлтый' };
-  var KINDS = { orig: 'Оригинал', dup: 'Дубликат' };
+  var KINDS = { orig: 'Оригинал', dup: 'Дубликат', uni: 'Универсал' };
   var ORDER = ['k', 'c', 'm', 'y'];
-  var LOW = 2; // меньше или равно — считать «заканчивается»
 
   /* 2. Данные и хранение */
   var KEY = 'cartridges-simple-v2', OP_KEY = 'cartridges-operator';
@@ -168,7 +167,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   var state = load();
   var open = {}; // какие цветные комплекты раскрыты
 
-  function kindOf(p) { return p && p.kind === 'dup' ? 'dup' : 'orig'; }
+  function kindOf(p) { return p && KINDS[p.kind] ? p.kind : 'orig'; }
   function subline(it, c, withBrand) {
     var a = [];
     if (withBrand && it.brand) a.push(esc(it.brand));
@@ -272,19 +271,17 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 
   function render() {
     $('opName').textContent = operator() || 'имя не указано';
-    var all = state.items, total = 0, bw = 0, col = 0, low = 0;
+    var all = state.items, total = 0, bw = 0, col = 0;
     all.forEach(function (i) {
       colorsOf(i.type).forEach(function (c) {
         var q = i.parts[c].qty; total += q;
         if (i.type === 'bw') bw += q; else col += q;
-        if (q <= LOW) low++;
       });
     });
     $('stats').innerHTML =
       '<div class="stat"><small>Всего штук</small><b>' + total + '</b></div>' +
       '<div class="stat"><small>Чёрно-белые</small><b>' + bw + '</b></div>' +
-      '<div class="stat"><small>Цветные</small><b>' + col + '</b></div>' +
-      '<div class="stat"><small>Заканчиваются</small><b>' + low + '</b></div>';
+      '<div class="stat"><small>Цветные</small><b>' + col + '</b></div>';
 
     var q = $('q').value.trim().toLowerCase(), ft = $('fType').value;
     var list = all.filter(function (i) {
@@ -365,7 +362,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
         var m = (v['model_' + c] || '').trim(), qty = parseInt(v['qty_' + c], 10);
         if (c === 'k' && !m) err = err || 'Укажите модель' + (v.type === 'color' ? ' чёрного картриджа.' : '.');
         if (!(qty >= 0)) err = err || 'Количество (' + COLORS[c].toLowerCase() + ') должно быть числом от 0.';
-        parts[c] = { model: m, qty: qty, kind: v.type === 'bw' ? 'orig' : (v['kind_' + c] === 'dup' ? 'dup' : 'orig') };
+        parts[c] = { model: m, qty: qty, kind: v.type === 'bw' ? 'orig' : (KINDS[v['kind_' + c]] ? v['kind_' + c] : 'orig') };
       });
       if (err) return err;
       if (!operator()) return 'Сначала укажите своё имя (ссылка «сменить» вверху страницы).';
