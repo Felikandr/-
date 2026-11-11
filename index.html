@@ -90,6 +90,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 .field input, .field select, .prow input { height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); width: 100%; min-width: 0; }
 .parts { display: grid; gap: 8px; margin-top: 14px; }
 .phead, .prow { display: grid; grid-template-columns: 100px minmax(0, 1fr) 112px 72px; gap: 8px; align-items: center; }
+.parts.bw .prow select, .parts.bw .phead span:nth-child(3) { visibility: hidden; }
 .prow select { height: 40px; padding: 0 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); width: 100%; min-width: 0; }
 .prow[hidden] { display: none; }
 .plabel { display: flex; align-items: center; font-size: 14px; }
@@ -171,6 +172,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   function subline(it, c, withBrand) {
     var a = [];
     if (withBrand && it.brand) a.push(esc(it.brand));
+    if (it.type === 'bw') return a.join(' · ');
     a.push(KINDS[kindOf(it.parts[c])]);
     a.push(TYPES[it.type]);
     return a.join(' · ');
@@ -354,7 +356,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       '<label class="field"><span>Тип</span><select name="type" id="fType2">' + Object.keys(TYPES).map(function (k) { return '<option value="' + k + '"' + (k === type ? ' selected' : '') + '>' + TYPES[k] + '</option>'; }).join('') + '</select></label>' +
       fld('Бренд', 'brand', it ? it.brand : '', 'maxlength="30"') +
       fld('Отсек', 'bin', it ? it.bin : '', 'maxlength="12" placeholder="Например A-1"', true) +
-      '</div><div class="parts"><div class="phead"><span>Цвет</span><span>Модель</span><span>Вид</span><span>Шт.</span></div>' + rows + '</div>';
+      '</div><div class="parts' + (type === 'bw' ? ' bw' : '') + '"><div class="phead"><span>Цвет</span><span>Модель</span><span>Вид</span><span>Шт.</span></div>' + rows + '</div>';
 
     var f = openModal(it ? 'Изменить картридж' : 'Новый картридж', body, it ? 'Сохранить' : 'Добавить', function (v) {
       var bin = v.bin.trim().toUpperCase(), parts = {}, err = null;
@@ -363,7 +365,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
         var m = (v['model_' + c] || '').trim(), qty = parseInt(v['qty_' + c], 10);
         if (c === 'k' && !m) err = err || 'Укажите модель' + (v.type === 'color' ? ' чёрного картриджа.' : '.');
         if (!(qty >= 0)) err = err || 'Количество (' + COLORS[c].toLowerCase() + ') должно быть числом от 0.';
-        parts[c] = { model: m, qty: qty, kind: v['kind_' + c] === 'dup' ? 'dup' : 'orig' };
+        parts[c] = { model: m, qty: qty, kind: v.type === 'bw' ? 'orig' : (v['kind_' + c] === 'dup' ? 'dup' : 'orig') };
       });
       if (err) return err;
       if (!operator()) return 'Сначала укажите своё имя (ссылка «сменить» вверху страницы).';
@@ -374,6 +376,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 
     f.querySelector('#fType2').onchange = function () {
       var show = colorsOf(this.value);
+      f.querySelector('.parts').classList.toggle('bw', this.value === 'bw');
       Array.prototype.forEach.call(f.querySelectorAll('.prow'), function (r) { r.hidden = show.indexOf(r.getAttribute('data-c')) < 0; });
     };
   }
