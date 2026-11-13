@@ -36,8 +36,7 @@ button, input, select { font: inherit; color: inherit; }
 .link { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; margin-left: 6px; text-decoration: underline; font-size: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.stat:first-child { grid-column: 1 / -1; text-align: center; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
 .stat small { color: var(--muted); display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
 .stat b { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; }
@@ -77,8 +76,6 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 .qty.zero b { color: var(--crit); }
 .bin { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 500; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
 .meta { color: var(--muted); font-size: 13px; line-height: 1.3; }
-.meta .chg { display: block; color: var(--fg); margin-top: 2px; white-space: nowrap; }
-.meta .chg .dot { width: 10px; height: 10px; margin-right: 6px; }
 .meta b { color: var(--fg); font-weight: 500; display: block; }
 .empty { text-align: center; color: var(--muted); padding: 32px 16px; white-space: normal; }
 
@@ -91,27 +88,19 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 .field.full { grid-column: 1 / -1; }
 .field span, .phead span { font-size: 12px; color: var(--muted); }
 .field input, .field select, .prow input { height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); width: 100%; min-width: 0; }
+.phelp { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.phelp .btn { height: 34px; padding: 0 12px; font-size: 13px; }
+.phelp .hint { font-size: 12px; color: var(--muted); }
 .parts { display: grid; gap: 8px; margin-top: 14px; }
-.phead, .prow { display: grid; grid-template-columns: 100px minmax(0, 1fr) 112px 72px; gap: 8px; align-items: center; }
-.parts.bw .prow select, .parts.bw .phead span:nth-child(3) { visibility: hidden; }
-.prow select { height: 40px; padding: 0 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); width: 100%; min-width: 0; }
+.phead, .prow { display: grid; grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr) 84px; gap: 8px; align-items: center; }
+.parts.bwmode .phead, .parts.bwmode .prow { grid-template-columns: 110px minmax(0, 1fr) 84px; }
+.parts.bwmode .pbrand { display: none; }
 .prow[hidden] { display: none; }
 .plabel { display: flex; align-items: center; font-size: 14px; }
 .err { background: var(--crit-bg); color: var(--crit); padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-top: 14px; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .row .spacer { margin-left: auto; }
-@media (max-width: 480px) { .form { grid-template-columns: 1fr; } .phead, .prow { grid-template-columns: 64px minmax(0, 1fr) 92px 56px; gap: 6px; } .plabel { font-size: 12px; } }
-.acts { display: flex; gap: 8px; flex-wrap: wrap; }
-.hist { max-width: 560px; }
-.hday { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 16px 0 6px; }
-.hday:first-of-type { margin-top: 4px; }
-.hrow { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.35; }
-.hrow .hm { font-weight: 500; }
-.hrow .hw { margin-top: 2px; }
-.hrow .hw .chg { margin-right: 12px; white-space: nowrap; }
-.hrow .hw .dot { width: 10px; height: 10px; margin-right: 6px; }
-.hrow .hby { color: var(--muted); font-size: 12px; margin-top: 2px; }
-.hempty { color: var(--muted); padding: 12px 0; }
+@media (max-width: 480px) { .form { grid-template-columns: 1fr; } .phead, .prow { grid-template-columns: 70px minmax(0, 1fr) minmax(0, 1fr) 60px; } .parts.bwmode .phead, .parts.bwmode .prow { grid-template-columns: 88px minmax(0, 1fr) 72px; } }
 .sync { color: var(--muted); font-size: 12px; margin-left: 10px; }
 .sync.bad { color: var(--crit); font-weight: 600; }
 </style>
@@ -123,13 +112,13 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       <h1><span class="logo" aria-hidden="true"><i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--k)"></i></span>Склад картриджей</h1>
       <div class="who">Вы работаете как: <b id="opName"></b><button class="link" id="opChange" type="button">сменить</button><span class="sync" id="sync"></span></div>
     </div>
-    <div class="acts"><button class="btn primary" id="addBtn" type="button">+ Добавить картридж</button><button class="btn" id="histBtn" type="button">История за месяц</button></div>
+    <button class="btn primary" id="addBtn" type="button">+ Добавить картридж</button>
   </header>
 
   <section class="stats" id="stats"></section>
 
   <div class="tools">
-    <input type="search" id="q" placeholder="Поиск по модели, бренду или отсеку">
+    <input type="search" id="q" placeholder="Поиск по модели, бренду, принтеру или отсеку">
     <select id="fType">
       <option value="">Все типы</option>
       <option value="bw">Чёрно-белые</option>
@@ -172,8 +161,49 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   /* 1. Справочники */
   var TYPES = { bw: 'Чёрно-белый', color: 'Цветной' };
   var COLORS = { k: 'Чёрный', c: 'Голубой', m: 'Пурпурный', y: 'Жёлтый' };
-  var KINDS = { orig: 'Оригинал', dup: 'Дубликат', uni: 'Универсал' };
   var ORDER = ['k', 'c', 'm', 'y'];
+  var LOW = 2; // меньше или равно — считать «заканчивается»
+
+  /* Справочник: модель картриджа -> подходящие принтеры. Дополняйте по мере надобности.
+     Первый элемент — варианты написания модели (без пробелов и дефисов), второй — принтеры. */
+  var COMPAT = [
+    [['16A', 'Q7516A'], 'HP LaserJet 5200, 5200n, 5200tn, 5200dtn, 5200L'],
+    [['045'], 'Canon LBP611Cn, LBP613Cdw, MF631Cn, MF633Cdw, MF635Cx'],
+    [['046'], 'Canon LBP653Cdw, LBP654Cx, MF732Cdw, MF734Cdw, MF735Cx'],
+    [['054'], 'Canon LBP621Cw, LBP623Cdw, MF641Cw, MF643Cdw, MF645Cx'],
+    [['055'], 'Canon LBP663Cdw, LBP664Cx, MF742Cdw, MF744Cdw, MF746Cx'],
+    [['069'], 'Canon LBP673Cdw, MF752Cdw, MF754Cdw, MF756Cx'],
+    [['205', 'CF530', 'CF531', 'CF532', 'CF533'], 'HP Color LaserJet Pro M154a, M154nw, MFP M180n, M181fw'],
+    [['415', 'W2030', 'W2031', 'W2032', 'W2033'], 'HP Color LaserJet Pro M454dn, M454dw, M454nw, MFP M479dw, M479fdn, M479fdw, M479fnw'],
+    [['CE310', 'CE311', 'CE312', 'CE313'], 'HP Color LaserJet Pro CP1025, CP1025nw, MFP M175a, M175nw, M275'],
+    [['CF350', 'CF351', 'CF352', 'CF353'], 'HP Color LaserJet Pro MFP M176n, M177fw'],
+    [['CE320', 'CE321', 'CE322', 'CE323'], 'HP Color LaserJet CP1525n, CP1525nw, CM1415fn, CM1415fnw'],
+    [['CE505'], 'HP LaserJet P2035, P2035n, P2055d, P2055dn, P2055x'],
+    [['CE719', '719'], 'Canon LBP6300dn, LBP6310dn, LBP6650dn, LBP6670dn, MF5840dn, MF5880dn, MF5940dn, MF5980dw'],
+    [['CF217'], 'HP LaserJet Pro M102a, M102w, MFP M130a, M130fn, M130fw, M130nw'],
+    [['CF219'], 'HP LaserJet Pro M102a, M102w, MFP M130a, M130fn, M130fw, M130nw (фотобарабан)'],
+    [['CF230'], 'HP LaserJet Pro M203d, M203dn, M203dw, MFP M227fdn, M227fdw, M227sdn'],
+    [['051'], 'Canon LBP162dw, MF264dw, MF267dw, MF269dw'],
+    [['CF280'], 'HP LaserJet Pro 400 M401a, M401d, M401dn, M401dw, MFP M425dn, M425dw'],
+    [['W1106'], 'HP Laser 107a, 107r, 107w, MFP 135a, 135r, 135w, 137fnw'],
+    [['CF410', 'CF411', 'CF412', 'CF413'], 'HP Color LaserJet Pro M452dn, M452dw, M452nw, MFP M377dw, M477fdn, M477fdw, M477fnw'],
+    [['TN2375', 'TN2335', 'TN2375'], 'Brother HL-L2300D, L2320D, L2340DW, L2360DN, L2365DW, DCP-L2500D, L2520DW, L2540DNR, MFC-L2700DNR, L2700DW, L2720DWR, L2740DW'],
+    [['TN241', 'TN245'], 'Brother HL-3140CW, HL-3150CDW, HL-3170CDW, DCP-9020CDW, MFC-9140CDN, MFC-9330CDW, MFC-9340CDW']
+  ];
+  /* Подбор принтеров по моделям: ищет каждое название из строки (через / , ;) в справочнике. */
+  function guessPrinters(models) {
+    var out = [];
+    models.forEach(function (m) {
+      String(m || '').toUpperCase().split(/[\/,;]+/).forEach(function (raw) {
+        var t = raw.replace(/[\s\-]/g, ''); if (!t) return;
+        COMPAT.forEach(function (e) {
+          var hit = e[0].some(function (a) { return t === a || (t.indexOf(a) === 0 && /^[A-Z]{1,2}$/.test(t.slice(a.length))); });
+          if (hit && out.indexOf(e[1]) < 0) out.push(e[1]);
+        });
+      });
+    });
+    return out.join('; ');
+  }
 
   /* 2. Данные и хранение */
   var KEY = 'cartridges-simple-v2', OP_KEY = 'cartridges-operator';
@@ -181,15 +211,6 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   var state = load();
   var open = {}; // какие цветные комплекты раскрыты
 
-  function kindOf(p) { return p && KINDS[p.kind] ? p.kind : 'orig'; }
-  function subline(it, c, withBrand) {
-    var a = [];
-    if (withBrand && it.brand) a.push(esc(it.brand));
-    if (it.type === 'bw') return a.join(' · ');
-    a.push(KINDS[kindOf(it.parts[c])]);
-    a.push(TYPES[it.type]);
-    return a.join(' · ');
-  }
   function colorsOf(type) { return type === 'bw' ? ['k'] : ORDER; }
   function seed() {
     var now = Date.now(), d = 864e5;
@@ -226,18 +247,15 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   function byName() { return operator() || 'Не указан'; }
   function find(st, id) { return st.items.filter(function (x) { return x.id === id; })[0]; }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
-  function log(st, it, by, at, what, chg, oth) {
-    var e = { t: at, by: by, item: it.id, model: it.parts.k.model, type: it.type, what: what };
-    if (chg && chg.length) e.chg = chg;
-    if (oth) e.oth = oth;
-    st.log.unshift(e);
-    if (st.log.length > 3000) st.log.length = 3000;
+  function log(st, it, by, at, what) {
+    st.log.unshift({ t: at, by: by, item: it.id, model: it.parts.k.model, what: what });
+    if (st.log.length > 500) st.log.length = 500;
   }
   function commit(op) { op(state); pending.push(op); save(); render(); push(); }
   function addItem(v) {
     var by = byName(), at = Date.now();
     commit(function (st) {
-      var it = { id: st.nextId++, brand: v.brand, type: v.type, bin: v.bin, parts: clone(v.parts), by: by, at: at };
+      var it = { id: st.nextId++, brand: v.brand, printers: v.printers || '', type: v.type, bin: v.bin, parts: clone(v.parts), by: by, at: at };
       st.items.push(it); log(st, it, by, at, 'Добавлен');
     });
   }
@@ -245,17 +263,14 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     var by = byName(), at = Date.now();
     commit(function (st) {
       var it = find(st, id); if (!it) return;
-      var ch = [], chg = [], oth = [];
+      var ch = [];
       colorsOf(v.type).forEach(function (c) {
         var was = it.parts[c] ? it.parts[c].qty : null;
-        var wasKind = it.parts[c] ? kindOf(it.parts[c]) : null;
-        if (wasKind && wasKind !== v.parts[c].kind) { var kt = COLORS[c].toLowerCase() + ' ' + KINDS[wasKind].toLowerCase() + ' → ' + KINDS[v.parts[c].kind].toLowerCase(); ch.push(kt); oth.push(kt); }
-        if (was !== null && was !== v.parts[c].qty) chg.push({ c: c, d: v.parts[c].qty - was, n: v.parts[c].qty });
         if (was !== v.parts[c].qty) ch.push(COLORS[c].toLowerCase() + ' ' + (was === null ? 'новый' : was) + ' → ' + v.parts[c].qty);
       });
-      if (it.bin !== v.bin) { var bt = 'отсек ' + it.bin + ' → ' + v.bin; ch.push(bt); oth.push(bt); }
-      it.brand = v.brand; it.type = v.type; it.bin = v.bin; it.parts = clone(v.parts);
-      it.by = by; it.at = at; it.chg = chg; log(st, it, by, at, ch.join(', ') || 'Карточка изменена', chg, oth.join(', '));
+      if (it.bin !== v.bin) ch.push('отсек ' + it.bin + ' → ' + v.bin);
+      it.brand = v.brand; it.printers = v.printers || ''; it.type = v.type; it.bin = v.bin; it.parts = clone(v.parts);
+      it.by = by; it.at = at; log(st, it, by, at, ch.join(', ') || 'Карточка изменена');
     });
   }
   function changeQty(id, color, delta) {
@@ -263,8 +278,8 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     commit(function (st) {
       var it = find(st, id); if (!it || !it.parts[color]) return;
       var p = it.parts[color], n = p.qty + delta; if (n < 0) return;
-      log(st, it, by, at, COLORS[color].toLowerCase() + ' ' + p.qty + ' → ' + n, [{ c: color, d: delta, n: n }]);
-      p.qty = n; it.by = by; it.at = at; it.chg = [{ c: color, d: delta }];
+      log(st, it, by, at, COLORS[color].toLowerCase() + ' ' + p.qty + ' → ' + n);
+      p.qty = n; it.by = by; it.at = at;
     });
   }
   function removeItem(id) {
@@ -284,34 +299,30 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     var q = it.parts[c].qty;
     return '<span class="qty' + (q === 0 ? ' zero' : '') + '"><button type="button" data-a="minus" data-id="' + it.id + '" data-c="' + c + '"' + (q === 0 ? ' disabled' : '') + ' aria-label="Минус один">−</button><b>' + q + '</b><button type="button" data-a="plus" data-id="' + it.id + '" data-c="' + c + '" aria-label="Плюс один">+</button></span>';
   }
-  function chgHTML(it) {
-    if (it.type !== 'color' || !it.chg || !it.chg.length) return '';
-    return it.chg.map(function (x) {
-      return '<span class="chg">' + dot(x.c) + COLORS[x.c] + ' ' + (x.d > 0 ? '+' : '−') + Math.abs(x.d) + '</span>';
-    }).join('');
-  }
   function modelHTML(m) { return m ? esc(m) : '<span class="nomodel">модель не указана</span>'; }
   var CHEV = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l5 5 5-5"/></svg>';
 
   function render() {
     $('opName').textContent = operator() || 'имя не указано';
-    var all = state.items, total = 0, bw = 0, col = 0;
+    var all = state.items, total = 0, bw = 0, col = 0, low = 0;
     all.forEach(function (i) {
       colorsOf(i.type).forEach(function (c) {
         var q = i.parts[c].qty; total += q;
         if (i.type === 'bw') bw += q; else col += q;
+        if (q <= LOW) low++;
       });
     });
     $('stats').innerHTML =
       '<div class="stat"><small>Всего штук</small><b>' + total + '</b></div>' +
       '<div class="stat"><small>Чёрно-белые</small><b>' + bw + '</b></div>' +
-      '<div class="stat"><small>Цветные</small><b>' + col + '</b></div>';
+      '<div class="stat"><small>Цветные</small><b>' + col + '</b></div>' +
+      '<div class="stat"><small>Заканчиваются</small><b>' + low + '</b></div>';
 
     var q = $('q').value.trim().toLowerCase(), ft = $('fType').value;
     var list = all.filter(function (i) {
       if (ft && i.type !== ft) return false;
       if (!q) return true;
-      var hay = i.brand + ' ' + i.bin + ' ' + colorsOf(i.type).map(function (c) { return i.parts[c].model; }).join(' ');
+      var hay = i.brand + ' ' + (i.printers || '') + ' ' + i.bin + ' ' + colorsOf(i.type).map(function (c) { return i.parts[c].model + ' ' + (i.parts[c].brand || ''); }).join(' ');
       return hay.toLowerCase().indexOf(q) >= 0;
     }).sort(function (a, b) { return a.parts.k.model.localeCompare(b.parts.k.model, 'ru', { numeric: true }); });
 
@@ -321,16 +332,16 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       html += '<tr class="main">' +
         '<td><div class="mcell">' +
           (isColor ? '<button class="chev" type="button" data-a="toggle" data-id="' + i.id + '" aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-label="Показать остальные цвета" title="Остальные цвета">' + CHEV + '</button>' : '<span class="spacer30"></span>') +
-          '<div><div class="model">' + modelHTML(i.parts.k.model) + '</div><div class="brand">' + subline(i, 'k', true) + '</div></div></div></td>' +
+          '<div><div class="model">' + modelHTML(i.parts.k.model) + '</div><div class="brand">' + esc(i.brand) + '</div>' + (i.printers ? '<div class="brand">Подходит: ' + esc(i.printers) + '</div>' : '') + '</div></div></td>' +
         '<td><span class="tag ' + (isColor ? '' : 'bw') + '">' + TYPES[i.type] + '</span></td>' +
         '<td>' + dot('k') + COLORS.k + '</td>' +
         '<td>' + qtyHTML(i, 'k') + '</td>' +
         '<td><span class="bin">' + esc(i.bin) + '</span></td>' +
-        '<td class="meta"><b>' + esc(i.by) + '</b>' + fmt(i.at) + chgHTML(i) + '</td>' +
+        '<td class="meta"><b>' + esc(i.by) + '</b>' + fmt(i.at) + '</td>' +
         '<td><button class="btn" type="button" data-a="edit" data-id="' + i.id + '">Изменить</button></td></tr>';
       if (isOpen) {
         ['c', 'm', 'y'].forEach(function (c) {
-          html += '<tr class="sub' + (c === 'y' ? ' last' : '') + '"><td><div class="model">' + modelHTML(i.parts[c].model) + '</div><div class="brand">' + subline(i, c, false) + '</div></td><td></td>' +
+          html += '<tr class="sub' + (c === 'y' ? ' last' : '') + '"><td><div class="model">' + modelHTML(i.parts[c].model) + '</div>' + (i.parts[c].brand ? '<div class="brand">' + esc(i.parts[c].brand) + '</div>' : '') + '</td><td></td>' +
             '<td>' + dot(c) + COLORS[c] + '</td><td>' + qtyHTML(i, c) + '</td><td></td><td></td><td></td></tr>';
         });
       }
@@ -367,17 +378,19 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   function openItemModal(it) {
     var type = it ? it.type : 'bw';
     var rows = ORDER.map(function (c) {
-      var p = it && it.parts[c] ? it.parts[c] : { model: '', qty: 0, kind: 'orig' };
+      var p = it && it.parts[c] ? it.parts[c] : { model: '', qty: 0 };
       return '<div class="prow" data-c="' + c + '"' + (colorsOf(type).indexOf(c) < 0 ? ' hidden' : '') + '><span class="plabel">' + dot(c) + COLORS[c] + '</span>' +
         '<input name="model_' + c + '" value="' + esc(p.model) + '" maxlength="30" placeholder="Модель" aria-label="Модель, ' + COLORS[c].toLowerCase() + '">' +
-        '<select name="kind_' + c + '" aria-label="Оригинал или дубликат, ' + COLORS[c].toLowerCase() + '">' + Object.keys(KINDS).map(function (k) { return '<option value="' + k + '"' + (kindOf(p) === k ? ' selected' : '') + '>' + KINDS[k] + '</option>'; }).join('') + '</select>' +
+        (c === 'k' ? '<span class="pbrand"></span>' : '<input class="pbrand" name="brand_' + c + '" value="' + esc(p.brand || '') + '" maxlength="30" placeholder="Бренд" aria-label="Бренд, ' + COLORS[c].toLowerCase() + '">') +
         '<input name="qty_' + c + '" type="number" min="0" step="1" value="' + p.qty + '" inputmode="numeric" aria-label="Количество, ' + COLORS[c].toLowerCase() + '"></div>';
     }).join('');
     var body = '<div class="form">' +
       '<label class="field"><span>Тип</span><select name="type" id="fType2">' + Object.keys(TYPES).map(function (k) { return '<option value="' + k + '"' + (k === type ? ' selected' : '') + '>' + TYPES[k] + '</option>'; }).join('') + '</select></label>' +
       fld('Бренд', 'brand', it ? it.brand : '', 'maxlength="30"') +
       fld('Отсек', 'bin', it ? it.bin : '', 'maxlength="12" placeholder="Например A-1"', true) +
-      '</div><div class="parts' + (type === 'bw' ? ' bw' : '') + '"><div class="phead"><span>Цвет</span><span>Модель</span><span>Вид</span><span>Шт.</span></div>' + rows + '</div>';
+      fld('Подходит к принтерам', 'printers', it ? (it.printers || '') : '', 'maxlength="200" placeholder="Например: Canon MF445dw, HP M428"', true) +
+      '<div class="phelp"><button class="btn" type="button" id="pAuto">Подобрать по модели</button><button class="btn" type="button" id="pWeb">Найти в интернете</button><span class="hint" id="pHint"></span></div>' +
+      '</div><div class="parts' + (type === 'bw' ? ' bwmode' : '') + '"><div class="phead"><span>Цвет</span><span>Модель</span><span class="pbrand">Бренд</span><span>Шт.</span></div>' + rows + '</div>';
 
     var f = openModal(it ? 'Изменить картридж' : 'Новый картридж', body, it ? 'Сохранить' : 'Добавить', function (v) {
       var bin = v.bin.trim().toUpperCase(), parts = {}, err = null;
@@ -386,39 +399,37 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
         var m = (v['model_' + c] || '').trim(), qty = parseInt(v['qty_' + c], 10);
         if (c === 'k' && !m) err = err || 'Укажите модель' + (v.type === 'color' ? ' чёрного картриджа.' : '.');
         if (!(qty >= 0)) err = err || 'Количество (' + COLORS[c].toLowerCase() + ') должно быть числом от 0.';
-        parts[c] = { model: m, qty: qty, kind: v.type === 'bw' ? 'orig' : (KINDS[v['kind_' + c]] ? v['kind_' + c] : 'orig') };
+        parts[c] = { model: m, qty: qty };
+        var pb = (v['brand_' + c] || '').trim(); if (pb && c !== 'k') parts[c].brand = pb;
       });
       if (err) return err;
       if (!operator()) return 'Сначала укажите своё имя (ссылка «сменить» вверху страницы).';
-      var data = { brand: v.brand.trim(), type: v.type, bin: bin, parts: parts };
+      var data = { brand: v.brand.trim(), printers: (v.printers || '').trim(), type: v.type, bin: bin, parts: parts };
       if (it) updateItem(it.id, data); else addItem(data);
       return null;
     }, it ? function () { removeItem(it.id); } : null);
 
+    function models() { return ORDER.map(function (c) { return f.elements['model_' + c].value; }); }
+    var pf = f.elements.printers, auto = pf.value, hint = f.querySelector('#pHint');
+    function suggest(force) {
+      var g = guessPrinters(models());
+      if (g && (force || !pf.value.trim() || pf.value === auto)) { pf.value = g; auto = g; hint.textContent = ''; }
+      else if (!g && force) hint.textContent = 'В справочнике нет — нажмите «Найти в интернете».';
+    }
+    ORDER.forEach(function (c) { f.elements['model_' + c].addEventListener('input', function () { suggest(false); }); });
+    f.querySelector('#pAuto').onclick = function () { suggest(true); };
+    f.querySelector('#pWeb').onclick = function () {
+      var m = (f.elements.model_k.value || '').trim();
+      if (!m) { hint.textContent = 'Сначала введите модель.'; return; }
+      window.open('https://www.google.com/search?q=' + encodeURIComponent(m + ' картридж совместимые принтеры'), '_blank', 'noopener');
+    };
+    if (!it) suggest(false);
+
     f.querySelector('#fType2').onchange = function () {
       var show = colorsOf(this.value);
-      f.querySelector('.parts').classList.toggle('bw', this.value === 'bw');
+      f.querySelector('.parts').classList.toggle('bwmode', this.value === 'bw');
       Array.prototype.forEach.call(f.querySelectorAll('.prow'), function (r) { r.hidden = show.indexOf(r.getAttribute('data-c')) < 0; });
     };
-  }
-  function openHistoryModal() {
-    var from = Date.now() - 30 * 24 * 3600 * 1000;
-    var list = (state.log || []).filter(function (e) { return e.t >= from; }).sort(function (a, b) { return b.t - a.t; });
-    var html = '', day = '';
-    list.forEach(function (e) {
-      var d = new Date(e.t).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      if (d !== day) { day = d; html += '<div class="hday">' + d + '</div>'; }
-      var tm = new Date(e.t).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-      var what;
-      if (e.type === 'color' && e.chg && e.chg.length) {
-        what = e.chg.map(function (x) { return '<span class="chg">' + dot(x.c) + COLORS[x.c] + ' ' + (x.d > 0 ? '+' : '−') + Math.abs(x.d) + (typeof x.n === 'number' ? ' (стало ' + x.n + ')' : '') + '</span>'; }).join('') + (e.oth ? esc(e.oth) : '');
-      } else what = esc(e.what);
-      html += '<div class="hrow"><div class="hm">' + (e.model ? esc(e.model) : '<span class="nomodel">модель не указана</span>') + '</div><div class="hw">' + what + '</div><div class="hby">' + tm + ' · ' + esc(e.by || '') + '</div></div>';
-    });
-    var ov = $('overlay');
-    ov.innerHTML = '<div class="modal hist" role="dialog" aria-modal="true"><h2>История за последний месяц</h2>' + (html || '<div class="hempty">За последний месяц изменений нет.</div>') + '<div class="row"><button class="btn" type="button" id="hc">Закрыть</button></div></div>';
-    ov.hidden = false;
-    $('hc').onclick = closeModal;
   }
   function openOperatorModal() {
     openModal('Ваше имя', '<div class="form"><div class="field full"><span>Оно записывается рядом с каждой правкой</span><input name="name" value="' + esc(operator()) + '" maxlength="30" placeholder="Например, Рашад"></div></div>', 'Сохранить', function (v) {
@@ -432,7 +443,6 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   function needName() { if (operator()) return false; openOperatorModal(); return true; }
   $('addBtn').onclick = function () { if (!needName()) openItemModal(null); };
   $('opChange').onclick = openOperatorModal;
-  $('histBtn').onclick = openHistoryModal;
   $('q').oninput = render;
   $('fType').onchange = render;
   $('overlay').addEventListener('mousedown', function (e) { if (e.target === this) closeModal(); });
