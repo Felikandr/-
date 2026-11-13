@@ -65,6 +65,8 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
 .spacer30 { width: 30px; flex: none; }
 .model { font-weight: 600; }
 .brand { color: var(--muted); font-size: 12px; }
+.prn { color: var(--muted); font-size: 12px; margin-top: 3px; max-width: 360px; line-height: 1.35; }
+.prn .link { font-size: 12px; margin-left: 4px; }
 .nomodel { color: var(--muted); }
 .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: -1px; border: 1px solid var(--line); }
 .tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: var(--accent-soft); color: var(--accent); }
@@ -173,6 +175,58 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   var TYPES = { bw: 'Чёрно-белый', color: 'Цветной' };
   var COLORS = { k: 'Чёрный', c: 'Голубой', m: 'Пурпурный', y: 'Жёлтый' };
   var KINDS = { orig: 'Оригинал', dup: 'Дубликат', uni: 'Универсал' };
+
+  /* Совместимость: модель картриджа → принтеры. Определяется автоматически по модели (и по составным, например CF230A/051).
+     Чтобы добавить новую модель — допишите строку в PRN_GROUPS: [ключи моделей без последней буквы A/X/H, бренд, список]. */
+  var PRN_GROUPS = [
+    [['16'], 'HP LaserJet', ['5200', '5200L', '5200n', '5200dtn']],
+    [['045'], 'Canon', ['LBP611Cn', 'LBP613Cdw', 'MF631Cn', 'MF633Cdw', 'MF635Cx']],
+    [['046'], 'Canon', ['LBP653Cdw', 'LBP654Cx', 'MF732Cdw', 'MF734Cdw', 'MF735Cx']],
+    [['054'], 'Canon', ['LBP621Cw', 'LBP623Cdw', 'MF641Cw', 'MF643Cdw', 'MF645Cx']],
+    [['055'], 'Canon', ['LBP663Cdw', 'LBP664Cx', 'MF742Cdw', 'MF744Cdw', 'MF746Cx']],
+    [['069'], 'Canon', ['LBP673Cdw', 'MF752Cdw', 'MF754Cdw', 'MF756Cx']],
+    [['051'], 'Canon', ['LBP162dw', 'MF264dw', 'MF267dw', 'MF269dw']],
+    [['205', 'CF530', 'CF531', 'CF532', 'CF533'], 'HP Color LaserJet Pro', ['M154a', 'M154nw', 'M180n', 'M181fw']],
+    [['415', 'W2030', 'W2031', 'W2032', 'W2033'], 'HP Color LaserJet Pro', ['M454dn', 'M454dw', 'M479dw', 'M479fdn', 'M479fdw', 'M479fnw']],
+    [['CE310', 'CE311', 'CE312', 'CE313', '126'], 'HP Color LaserJet Pro', ['CP1025', 'CP1025nw', 'M175a', 'M175nw', 'M275']],
+    [['CE310', 'CE311', 'CE312', 'CE313', '126', '729'], 'Canon', ['LBP7010C', 'LBP7018C']],
+    [['CF350', 'CF351', 'CF352', 'CF353', '130'], 'HP Color LaserJet Pro', ['M176n', 'M177fw']],
+    [['CE320', 'CE321', 'CE322', 'CE323', '128'], 'HP Color LaserJet Pro', ['CM1415fn', 'CM1415fnw', 'CP1525n', 'CP1525nw']],
+    [['CE505', '05'], 'HP LaserJet', ['P2035', 'P2035n', 'P2055d', 'P2055dn', 'P2055x']],
+    [['CE505', '05', 'CE719', '719'], 'Canon', ['LBP6300dn', 'LBP6650dn', 'MF5840dn', 'MF5880dn', 'MF5940dn', 'MF5980dw']],
+    [['CF217', '17', 'CF219', '19'], 'HP LaserJet Pro', ['M102a', 'M102w', 'M130a', 'M130fn', 'M130fw', 'M130nw']],
+    [['CF230', '30'], 'HP LaserJet Pro', ['M203d', 'M203dn', 'M203dw', 'M227fdn', 'M227fdw', 'M227sdn']],
+    [['CF280', '80'], 'HP LaserJet Pro', ['M401a', 'M401d', 'M401dn', 'M401dw', 'M425dn', 'M425dw']],
+    [['W1106', '106'], 'HP Laser', ['107a', '107r', '107w', 'MFP 135a', 'MFP 135r', 'MFP 135w', 'MFP 137fnw']]
+  ];
+  var PRN = {};
+  PRN_GROUPS.forEach(function (g) {
+    g[0].forEach(function (k) {
+      PRN[k] = PRN[k] || [];
+      g[2].forEach(function (n) { PRN[k].push(g[1] + ' ' + n); });
+    });
+  });
+  function printersOf(it) {
+    var out = [], seen = {};
+    function add(n) { n = n.trim(); if (n && !seen[n.toLowerCase()]) { seen[n.toLowerCase()] = 1; out.push(n); } }
+    colorsOf(it.type).forEach(function (c) {
+      var m = (it.parts[c] && it.parts[c].model || '').toUpperCase();
+      m.split(/[\/,;\s]+/).forEach(function (t) {
+        if (!t) return;
+        var list = PRN[t] || PRN[t.replace(/[AXH]$/, '')];
+        if (list) list.forEach(add);
+      });
+    });
+    (it.printers || '').split(',').forEach(add);
+    return out;
+  }
+  var prnOpen = {};
+  function prnHTML(it) {
+    var l = printersOf(it); if (!l.length) return '';
+    var all = prnOpen[it.id], shown = all ? l : l.slice(0, 3);
+    return '<div class="prn">Принтеры: ' + shown.map(esc).join(', ') +
+      (l.length > 3 ? ' <button type="button" class="link" data-a="prn" data-id="' + it.id + '">' + (all ? 'свернуть' : '+' + (l.length - 3) + ' ещё') + '</button>' : '') + '</div>';
+  }
   var ORDER = ['k', 'c', 'm', 'y'];
 
   /* 2. Данные и хранение */
@@ -237,7 +291,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
   function addItem(v) {
     var by = byName(), at = Date.now();
     commit(function (st) {
-      var it = { id: st.nextId++, brand: v.brand, type: v.type, bin: v.bin, parts: clone(v.parts), by: by, at: at };
+      var it = { id: st.nextId++, brand: v.brand, type: v.type, bin: v.bin, printers: v.printers || '', parts: clone(v.parts), by: by, at: at };
       st.items.push(it); log(st, it, by, at, 'Добавлен');
     });
   }
@@ -254,7 +308,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
         if (was !== v.parts[c].qty) ch.push(COLORS[c].toLowerCase() + ' ' + (was === null ? 'новый' : was) + ' → ' + v.parts[c].qty);
       });
       if (it.bin !== v.bin) { var bt = 'отсек ' + it.bin + ' → ' + v.bin; ch.push(bt); oth.push(bt); }
-      it.brand = v.brand; it.type = v.type; it.bin = v.bin; it.parts = clone(v.parts);
+      it.brand = v.brand; it.type = v.type; it.bin = v.bin; it.printers = v.printers || ''; it.parts = clone(v.parts);
       it.by = by; it.at = at; it.chg = chg; log(st, it, by, at, ch.join(', ') || 'Карточка изменена', chg, oth.join(', '));
     });
   }
@@ -311,7 +365,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     var list = all.filter(function (i) {
       if (ft && i.type !== ft) return false;
       if (!q) return true;
-      var hay = i.brand + ' ' + i.bin + ' ' + colorsOf(i.type).map(function (c) { return i.parts[c].model; }).join(' ');
+      var hay = i.brand + ' ' + i.bin + ' ' + printersOf(i).join(' ') + ' ' + colorsOf(i.type).map(function (c) { return i.parts[c].model; }).join(' ');
       return hay.toLowerCase().indexOf(q) >= 0;
     }).sort(function (a, b) { return a.parts.k.model.localeCompare(b.parts.k.model, 'ru', { numeric: true }); });
 
@@ -321,7 +375,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       html += '<tr class="main">' +
         '<td><div class="mcell">' +
           (isColor ? '<button class="chev" type="button" data-a="toggle" data-id="' + i.id + '" aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-label="Показать остальные цвета" title="Остальные цвета">' + CHEV + '</button>' : '<span class="spacer30"></span>') +
-          '<div><div class="model">' + modelHTML(i.parts.k.model) + '</div><div class="brand">' + subline(i, 'k', true) + '</div></div></div></td>' +
+          '<div><div class="model">' + modelHTML(i.parts.k.model) + '</div><div class="brand">' + subline(i, 'k', true) + '</div>' + prnHTML(i) + '</div></div></td>' +
         '<td><span class="tag ' + (isColor ? '' : 'bw') + '">' + TYPES[i.type] + '</span></td>' +
         '<td>' + dot('k') + COLORS.k + '</td>' +
         '<td>' + qtyHTML(i, 'k') + '</td>' +
@@ -377,6 +431,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       '<label class="field"><span>Тип</span><select name="type" id="fType2">' + Object.keys(TYPES).map(function (k) { return '<option value="' + k + '"' + (k === type ? ' selected' : '') + '>' + TYPES[k] + '</option>'; }).join('') + '</select></label>' +
       fld('Бренд', 'brand', it ? it.brand : '', 'maxlength="30"') +
       fld('Отсек', 'bin', it ? it.bin : '', 'maxlength="12" placeholder="Например A-1"', true) +
+      fld('Принтеры (дополнительно)', 'printers', it ? it.printers || '' : '', 'maxlength="200" placeholder="Основные подбираются сами по модели; здесь — свои, через запятую"', true) +
       '</div><div class="parts' + (type === 'bw' ? ' bw' : '') + '"><div class="phead"><span>Цвет</span><span>Модель</span><span>Вид</span><span>Шт.</span></div>' + rows + '</div>';
 
     var f = openModal(it ? 'Изменить картридж' : 'Новый картридж', body, it ? 'Сохранить' : 'Добавить', function (v) {
@@ -390,7 +445,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
       });
       if (err) return err;
       if (!operator()) return 'Сначала укажите своё имя (ссылка «сменить» вверху страницы).';
-      var data = { brand: v.brand.trim(), type: v.type, bin: bin, parts: parts };
+      var data = { brand: v.brand.trim(), type: v.type, bin: bin, printers: (v.printers || '').trim(), parts: parts };
       if (it) updateItem(it.id, data); else addItem(data);
       return null;
     }, it ? function () { removeItem(it.id); } : null);
@@ -442,6 +497,7 @@ tr.sub.last td { border-bottom: 1px solid var(--line); }
     var id = parseInt(b.getAttribute('data-id'), 10), a = b.getAttribute('data-a'), c = b.getAttribute('data-c');
     var it = state.items.filter(function (x) { return x.id === id; })[0]; if (!it) return;
     if (a === 'toggle') { open[id] = !open[id]; render(); return; }
+    if (a === 'prn') { prnOpen[id] = !prnOpen[id]; render(); return; }
     if (needName()) return;
     if (a === 'edit') openItemModal(it);
     else changeQty(it.id, c, a === 'plus' ? 1 : -1);
